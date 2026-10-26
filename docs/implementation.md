@@ -10,6 +10,16 @@ Share this page with the team. It is the build spec for the AITX hackathon.
 
 The finished code shows what was built. DevLens shows which check failed, what the person answered, what changed, and which later test passed. A judge clicks that claim and sees the screen recording, the event, the diff, and the test. Events and the recording live in Supabase. The page does not score anyone.
 
+## Scope layers
+
+| Layer | What | When |
+|---|---|---|
+| Thursday demo | One golden scenario, `examples/broken-api`. Window recording. Click from the failed test to the later pass. | Must ship |
+| If time permits | Six more scenarios. Desktop capture as a second opt-in. More recordings only after the golden click works. | Before Thursday noon |
+| After the fair | A virtual desktop the developer downloads and can install tools on. The same evidence model over a week-long project. | Not this submission |
+
+The seven scenario names are in [plans/devlens.contract.md](../plans/devlens.contract.md). Only the first is recorded for the demo.
+
 ## Done
 
 Thursday, 29 October 2026, 3:00 PM Central, all of these are true:
@@ -77,7 +87,9 @@ Stack: TypeScript CLI, Supabase Postgres, Supabase Storage, one Next.js page. No
 
 ## The task
 
-`examples/broken-api` is a tiny service with one bug a person can see. Use a wrong base URL or a swapped JSON field. Keep it small enough to finish in one sitting.
+`examples/broken-api` is the golden scenario: a tiny service with one bug a person can see. Use a wrong base URL. Keep it small enough to finish in one sitting.
+
+If time permits after that scenario replays, add six more folders. Suggested bugs: swapped JSON field, missing bearer token, stale cache, off-by-one page, wrong time zone, and a missing array treated as success. Each starter test fails. Do not record those six until the golden replay works.
 
 The history must contain both commits:
 
@@ -171,7 +183,8 @@ Use `getDisplayMedia` and `MediaRecorder`. Audio off. Record one window, not the
 | Rule | Behavior |
 |---|---|
 | Opt-in | The developer clicks. A page load does not call `getDisplayMedia`. |
-| Window | Read `getSettings().displaySurface`. If it is `monitor`, stop and ask again. |
+| Window | Window mode reads `getSettings().displaySurface`. If it is `monitor`, stop and ask again. |
+| Desktop | Desktop mode is a second click. A monitor take is kept and labeled desktop. Camera and microphone stay off. The developer reviews the file before upload. |
 | Pause | `MediaRecorder.pause`. Store `[wall_pause, wall_resume]`. |
 | Stop | `MediaRecorder.stop`, or the browser sharing indicator stops. Later hook events have a null `recording_ref`. |
 | Review | The developer can play the file before a reviewer sees it. |
@@ -383,7 +396,7 @@ Do not start a Cursor or Codex adapter on Wednesday.
 
 Limitations to write down:
 
-- One window, not the desktop
+- Window mode is one window. Desktop mode is a separate opt-in and is labeled desktop.
 - No camera and no microphone
 - A monitor share is rejected
 - Pauses are removed from the seek time
@@ -456,7 +469,10 @@ When asked "is it an agent?": the capture is hooks. The agent is the worker that
 | Fixture timeline and one clickable edge | Live capture at the judging table |
 | Screen recording in Supabase Storage, or a labeled local WebM | FFmpeg clips |
 | Supabase Postgres for events and edges | Cursor or Codex adapters |
-| Offline fallback if Supabase is unreachable | A synthetic week strip, labeled synthetic |
+| Offline fallback if Supabase is unreachable | Recordings of the other six scenarios |
+| — | Desktop mode, after window mode works |
+| — | A downloadable virtual desktop, after the fair |
+| — | A week-long project, after the fair. An early strip must say it is not in this build. |
 | Sandbox re-run, or an honest omission | An LLM narrative |
 | Three cited questions and the unknowns panel | — |
 | No score | — |
@@ -464,7 +480,7 @@ When asked "is it an agent?": the capture is hooks. The agent is the worker that
 
 ## Do not build
 
-Scores, ranks, competency met or unmet, cheating verdicts, camera, microphone, full-desktop capture, keystroke timing, a graph database, login, an ATS, billing, multi-tenant hosting, a seven-day capture, a second agent adapter, a video model, OCR blur, or a candidate marketplace.
+Scores, ranks, competency met or unmet, cheating verdicts, camera, microphone, keystroke timing, a graph database, login, an ATS, billing, multi-tenant hosting, a second agent adapter, a video model, OCR blur, or a candidate marketplace. Desktop capture is allowed only as the labeled desktop mode. A week-long project is after the fair, not this demo.
 
 ## Checks
 
@@ -475,7 +491,8 @@ Scores, ranks, competency met or unmet, cheating verdicts, camera, microphone, f
 | Secret stripped | Unit test with a fake key | Tuesday |
 | Pause excluded | Unit test with a 5 second pause | Tuesday |
 | Edges exist | Unit test on the fixture | Tuesday |
-| Monitor rejected | Browser check | Tuesday |
+| Window mode rejects a monitor | Browser check | Tuesday |
+| Desktop mode keeps a monitor and labels it | Browser check, only if desktop mode is in the build | After the window path works |
 | Re-run result | Worker test against the two commits | Wednesday |
 | Supabase demo | `npm run demo` plays the Storage recording | Wednesday |
 | Secret key stays server-side | Client bundle does not contain `SUPABASE_SECRET_KEY` | Wednesday |

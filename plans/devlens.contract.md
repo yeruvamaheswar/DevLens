@@ -4,11 +4,11 @@ title: DevLens hackathon scope
 status: active
 updated: 2026-10-26
 ---
-Summary: Ship a consented evidence agent on Supabase whose screen recording lets a judge click from a failed test to the later pass.
+Summary: Ship one clickable replay, a catalog of at least seven scenarios, and an opt-in desktop recording. A virtual desktop and a week-long project wait until after that demo.
 Goal: A working Antler Agents demo submitted before Thursday 29 October 2026, 5:00 PM Central.
-Rules: Supabase is the store · Window recording is required · Local fixture if the network fails · No score · Thursday noon freeze
-Intent: Use Supabase as the database, record the screen, and win this hackathon.
-Not wanted: scores · ranks · hire recommendations · camera · microphone · full desktop · week-long capture · graph database · a second coding agent on the critical path
+Rules: Supabase is the store · Window and desktop are both opt-in · One golden replay must ship · Seven scenarios are tasks · Virtual desktop and the week view are later · No score · Thursday noon freeze
+Intent: At least seven scenarios, desktop capture as well as the window, and later a downloadable virtual desktop and a week-long project. Extend only if time permits.
+Not wanted: scores · ranks · hire recommendations · camera · microphone · keystroke timing · graph database · a second coding agent on the critical path · calling this week's demo a full week
 
 Track: Antler Agents
 Deadline: 2026-10-29 17:00 America/Chicago
@@ -38,12 +38,20 @@ Repo: https://github.com/yeruvamaheswar/DevLens
 - `PostToolUseFailure` on a real failing test: unknown
 - Supabase project ref: unknown
 - Deployed replay URL: unknown
+- Thursday depth for the seven scenarios: recommended seven tasks and one recorded replay. User has not confirmed this split.
+- Virtual desktop image format: unknown
+- Week-long review layout: unknown
 
 ## Requirements
 | ID | Requirement | Source |
 |---|---|---|
 | REQ-1 | Recording starts only after an explicit opt-in click. A page load does not record. | user |
-| REQ-2 | The developer picks one window. If `displaySurface` is `monitor`, discard that take and ask again. Audio stays off. | agent |
+| REQ-2 | Window mode records one window. If `displaySurface` is `monitor` in window mode, discard that take and ask again. Audio stays off. | agent |
+| REQ-17 | The repo offers at least seven scenarios a developer can work. Each has a starter test that fails on purpose. | user |
+| REQ-18 | Desktop capture is a second opt-in. The developer chooses desktop mode, the take may be a monitor, and the page labels it desktop. | user |
+| REQ-19 | Later, a developer can download a virtual desktop and install the tools they need to implement a fix. | user |
+| REQ-20 | Later, the same evidence model covers a week-long project. This week's demo is not that week. | user |
+| REQ-21 | Extra scenarios, extra recordings, the virtual desktop, and the week view are built only after the golden replay works, and only if time remains before Thursday noon. | user |
 | REQ-3 | Start, pause, and stop work. The developer can play the file before anyone else sees it. Pause time is excluded from `media_offset_ms`. | agent |
 | REQ-4 | `devlens init` installs Claude Code hooks that append redacted JSONL. Each event has `session_id` and `tool_use_id` when the hook provides them. | agent |
 | REQ-5 | One task repo has a broken API client. The starter test fails. A plausible first fix fails a second assertion. A later change passes. Both commits stay. | agent |
@@ -57,8 +65,8 @@ Repo: https://github.com/yeruvamaheswar/DevLens
 | REQ-13 | The public README has a quick start, the stack, an architecture diagram, env setup, data provenance, limitations, and next steps. A 2–5 minute Loom exists. The Airtable form is submitted before the deadline. | user |
 | REQ-14 | The page states what was not captured: reasoning, the editor, other terminals, camera, and microphone. | user |
 | NOT-1 | The product must not score, rank, mark a competency met or unmet, recommend a hire, or give a cheating verdict. | user |
-| NOT-2 | The product must not record the camera, the microphone, the full desktop, or keystroke timing. | user |
-| NOT-3 | The critical path must not add Cursor, Codex, a graph database, login, an ATS, billing, or a seven-day capture. | agent |
+| NOT-2 | The product must not record the camera, the microphone, or keystroke timing. Desktop video is allowed only in desktop mode, after the same opt-in. | user |
+| NOT-3 | The Thursday critical path must not add Cursor, Codex, a graph database, login, an ATS, or billing. The week-long project is later. It is not this submission. | user |
 | NOT-4 | A synthetic multi-day strip, if shown, must be labeled synthetic. It must not be described as a real week. | agent |
 | REQ-15 | Events, entities, and edges are rows in Supabase Postgres. RLS is enabled. The browser never receives the secret key. | user |
 | REQ-16 | The screen recording of the chosen window is stored in Supabase Storage. Replay plays that file. | user |
@@ -72,17 +80,20 @@ Repo: https://github.com/yeruvamaheswar/DevLens
 | DEC-2 | Enter Antler Agents. The form has no Open track. The agent does the re-run. A passive log summary is not the demo. | agent |
 | DEC-3 | Store events, entities, and edges in Supabase Postgres. Store the screen recording in Supabase Storage. Traversals stay one to three hops. No graph database. | user |
 | DEC-4 | Claude Code is the only agent adapter on the critical path. Record the fixture early. | agent |
-| DEC-5 | Screen recording is required. Capture is `getDisplayMedia` plus `MediaRecorder` for one window, then upload to Storage. A full monitor is rejected. ScreenCaptureKit, Screenpipe, OBS, and rrweb are not the recorder. | user |
+| DEC-5 | Screen recording is required. Capture is `getDisplayMedia` plus `MediaRecorder`, then upload to Storage. Window mode rejects a monitor. Desktop mode is DEC-11. ScreenCaptureKit, Screenpipe, OBS, and rrweb are not the recorder. | user |
 | DEC-6 | Claims come from hooks, git, and tests. The video is the picture of those claims. A video model does not invent a claim. | agent |
 | DEC-7 | Freeze features at Thursday 29 October 2026, noon Central. 1:00–4:00 PM is for submission. | agent |
 | DEC-8 | If the fixture has no linked failure and pass by Tuesday 27 October 2026, noon Central, stop this build. | agent |
 | DEC-9 | This public repo is the hackathon product. Research notes stay out of it. | user |
+| DEC-10 | Thursday replays one golden scenario. The other scenarios are tasks in the repo. Recording all seven is only if time permits after that replay works. | agent |
+| DEC-11 | Desktop mode accepts a monitor and labels the file desktop. Window mode still rejects a monitor. | agent |
+| DEC-12 | The downloadable virtual desktop and the week-long project are after the hackathon demo. | user |
 
 ## Evals
 | ID | REQ | Check | Method | Result |
 |---|---|---|---|---|
 | EVAL-1 | REQ-1 | Opening the record page creates no media file until the opt-in click. | browser | not run |
-| EVAL-2 | REQ-2, NOT-2 | A monitor choice is discarded. The saved file is one window. No camera track. | browser | not run |
+| EVAL-2 | REQ-2, NOT-2 | In window mode, a monitor choice is discarded. The saved file is one window. No camera track. | browser | not run |
 | EVAL-3 | REQ-3 | A 5 second pause does not add 5 seconds to `media_offset_ms`. | unit | not run |
 | EVAL-4 | REQ-4 | One `claude -p` prompt appends a JSONL line with `session_id` and `tool_use_id`. | integration | not run |
 | EVAL-5 | REQ-5 | `npm test` in `examples/broken-api` fails on the starter commit and passes on the final commit. | integration | not run |
@@ -97,6 +108,10 @@ Repo: https://github.com/yeruvamaheswar/DevLens
 | EVAL-14 | NOT-3, NOT-4 | The demo repo has one agent adapter. Any extra day strip is visibly labeled synthetic. | human | not run |
 | EVAL-15 | REQ-15, NOT-6 | RLS is on. The publishable key can read the fixture and cannot insert. The secret key is absent from the client bundle. | integration | not run |
 | EVAL-16 | REQ-16, REQ-8 | Replay plays the Storage object and seeks it from a claim click. | browser | not run |
+| EVAL-17 | REQ-17 | The repo contains at least seven scenario folders. `npm test` fails in each on its starter. | integration | not run |
+| EVAL-18 | REQ-18, REQ-2, NOT-2 | Desktop mode keeps a monitor take and labels it desktop. Window mode discards a monitor take. No camera track in either. | browser | not run |
+| EVAL-19 | REQ-19, REQ-21 | `npm run demo` does not require a virtual desktop. The README names that download as later. | human | not run |
+| EVAL-20 | REQ-20, NOT-4, REQ-21 | The Thursday demo has no week strip, or any strip on screen is labeled "not in this build." | human | not run |
 
 ## Infrastructure
 | Resource | Defined in | Applied by | Secrets |
@@ -108,6 +123,10 @@ Repo: https://github.com/yeruvamaheswar/DevLens
 | Browser read | `apps/web` | publishable key | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` |
 | Broken API task and fixture | `examples/broken-api` | `npm test` and `npm run demo` | none |
 | Screen recording | `apps/web/record/page.tsx` | browser `getDisplayMedia` | none |
+| Desktop recording mode | `apps/web/record/page.tsx` | developer chooses desktop, then the browser | none |
+| Scenario catalog | `examples/` | `npm test` in each scenario | none |
+| Virtual desktop image | unknown | later, not this demo | unknown |
+| Week-long review | unknown | later, not this demo | none |
 | Reviewer player | `apps/web/replay/page.tsx` | `npm run demo` | none |
 | GitHub repository | manual | `gh` | none |
 | Public deploy | unknown | — | none |
@@ -122,6 +141,8 @@ Repo: https://github.com/yeruvamaheswar/DevLens
 | Supabase read succeeded | reviewer page and browser network log | EVAL-15 |
 | Offline fallback started | local server log | EVAL-11 |
 | Recording uploaded | Storage object for `recording_ref` | EVAL-16 |
+| Scenario count is at least seven | repo listing and starter tests | EVAL-17 |
+| Desktop take is labeled desktop | reviewer page | EVAL-18 |
 
 ## Architecture
 ```mermaid
@@ -212,20 +233,59 @@ Loom storyboard, recorded after the Thursday noon freeze: failing test, bad patc
 - [ ] Freeze at Thursday noon and revert anything that breaks `npm run demo` · Cursor · EVAL-11 still passes · restore the noon commit
 - [ ] Finish the README, record the Loom, and submit the form · user · EVAL-13 · submit with the known gap written in the description
 
+### Slice 6: Six more scenarios
+- Covers: REQ-17, REQ-21
+- Model: Cursor (auto)
+- Depends on: Slice 1, and the golden replay still passing
+- Files: `examples/swapped-field`, `examples/missing-auth`, `examples/stale-cache`, `examples/wrong-page`, `examples/bad-date`, `examples/empty-list`
+- [ ] Add six starter tasks whose tests fail · Cursor (auto) · EVAL-17 · delete the extra example folders
+
+### Slice 7: Desktop capture
+- Covers: REQ-18, REQ-2, NOT-2, REQ-21
+- Model: Cursor (auto)
+- Depends on: Slice 3
+- Files: `apps/web/record/page.tsx`
+- [ ] Add desktop mode and label that take · Cursor (auto) · EVAL-18 · hide desktop mode and keep window mode
+
+### Slice 8: Virtual desktop
+- Covers: REQ-19
+- Model: Cursor (auto)
+- Depends on: Slice 5 submitted
+- Files: unknown
+- [ ] Offer a downloadable desktop the developer can tool · Cursor (auto) · EVAL-19 passes because the demo does not need it · remove the image from the demo path
+
+### Slice 9: Week-long project
+- Covers: REQ-20, NOT-4
+- Model: Cursor (auto)
+- Depends on: Slice 5 submitted
+- Files: unknown
+- [ ] Show a week of sessions on the same evidence model · Cursor (auto) · EVAL-20, and any early mock is labeled not in this build · remove the week view
+
+## Scenarios
+Names below are a suggestion until the user renames them. Only `broken-api` is the golden replay.
+
+| # | Folder | Bug the starter test shows |
+|---|---|---|
+| 1 | `examples/broken-api` | Wrong base URL. This is the recorded demo. |
+| 2 | `examples/swapped-field` | Response JSON uses the wrong key. |
+| 3 | `examples/missing-auth` | The client omits the bearer token. |
+| 4 | `examples/stale-cache` | A cached error is returned after the server recovered. |
+| 5 | `examples/wrong-page` | Pagination is off by one. |
+| 6 | `examples/bad-date` | A timestamp is read in the wrong zone. |
+| 7 | `examples/empty-list` | A missing array is treated as success. |
+
+Each scenario keeps the same shape. The starter fails. A plausible first fix fails a second assertion. A later change passes. Both commits stay. Do not record scenarios 2–7 until scenario 1 replays.
+
 ## Must ship vs later
-| Must ship | Later, only after Tuesday noon fixture |
-|---|---|
-| Fixture timeline and one clickable edge | Live capture at the judging table |
-| Screen recording in Supabase Storage, or a labeled local WebM | FFmpeg clips |
-| Supabase Postgres for events and edges | Cursor or Codex adapters |
-| Offline fallback if Supabase is unreachable | Synthetic week strip |
-| Sandbox re-run or an honest omission | LLM narrative |
-| Three cited questions and the unknowns panel | — |
-| No score | — |
-| README and Loom | — |
+| Layer | What | When |
+|---|---|---|
+| Thursday demo | One clickable replay of `broken-api`, window recording, Supabase, offline fallback, three questions, no score, README, Loom | Must ship |
+| If time permits | The other six scenario tasks. Desktop mode on the golden session. Recorded sessions for those six. | Only after the golden replay works, and before Thursday noon |
+| After the fair | A virtual desktop the developer downloads and can tool. A week-long project on the same evidence model. | Not this submission |
 
 ## Changes
 | ID | Date | Change | Affects | Approved |
 |---|---|---|---|---|
 | CR-1 | 2026-10-26 | Winning scope added to the public repo from the same-day research. | REQ-1 through NOT-5 | user asked to add the scope |
 | CR-2 | 2026-10-26 | Database is Supabase Postgres. Screen recording is required and stored in Supabase Storage. The full desktop stays out. Offline fixture remains the table fallback. | DEC-3, DEC-5, REQ-8, REQ-11, REQ-15, REQ-16, NOT-6 | user |
+| CR-3 | 2026-10-26 | Add at least seven scenarios and opt-in desktop capture. Virtual desktop and the week-long project are later. Extra scope waits until the golden replay works. | REQ-17, REQ-18, REQ-19, REQ-20, REQ-21, NOT-2, NOT-3, DEC-10, DEC-11, DEC-12 | user |
