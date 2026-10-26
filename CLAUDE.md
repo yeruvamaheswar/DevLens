@@ -12,7 +12,7 @@ Subscriptions are tiers, not measured budgets. T3 does not show remaining usage.
 
 | Provider | Plan | Use for |
 |---|---|---|
-| Claude | $100 | Tech Lead work, architecture and security review, final integration, hard failures |
+| Claude | $100 (high tier) | Tech Lead work, and also builds and reviews. Use Sonnet 5.5 for builds, reviews, and anything needing live Supabase tools. Use Opus 5.5 for the hardest slices and final integration. |
 | Codex | $20 | Bounded TypeScript, tests, deterministic rules, debugging |
 | AGY | $20 | Mechanical work such as starter scenarios. Use Gemini Flash. |
 | Cursor | $30 | Frontend, recorder, replay UI. Use model `default` (Auto). |
@@ -23,11 +23,11 @@ These are defaults. The Tech Lead picks the model per task and records the reaso
 ## Efficiency rules
 1. Use the cheapest model and lowest effort that can do the task reliably. Do not default to high effort or to Opus.
 2. Run at most 3 agents at once. Run parallel agents only for independent work with disjoint files and ready dependencies.
-3. Protect Claude. Move builds and routine reviews to Codex, Cursor, Grok, or AGY. Keep Claude for orchestration, security-critical review, and escalation.
+3. Use Claude freely for subagents: the plan has the headroom. Still balance load. Do not stack several slices on one provider while another is idle. The Tech Lead session itself also draws on Claude, so keep its own context small.
 4. Review with a different session. Prefer a different model family than the builder.
 5. Prefer a deterministic test over another model review when a test can prove the result.
 6. Give each agent only the files and context its slice needs. Do not rebuild context that evidence already holds.
-7. After a failed check, raise one agent by one level or switch to its fallback provider. Try three times at most, then stop and ask the user.
+7. When a provider is unavailable (limit, expired login), move the slice to the next fit, and prefer Claude as that fallback. After a failed check, raise one agent by one level or switch to its fallback provider. Try three times at most, then stop and ask the user.
 8. If a provider reports a limit, switch to the slice's fallback and record it. Never invent usage numbers.
 9. Never claim an agent launched when it did not. If T3 cannot dispatch a model, write a manual handoff.
 
