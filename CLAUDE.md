@@ -22,7 +22,7 @@ These are defaults. The Tech Lead picks the model per task and records the reaso
 
 ## Efficiency rules
 1. Use the cheapest model and lowest effort that can do the task reliably. Do not default to high effort or to Opus.
-2. Run at most 3 agents at once. Run parallel agents only for independent work with disjoint files and ready dependencies.
+2. There is no fixed cap on agents. The Tech Lead decides how many run, using the `subagent-budget` skill. Run parallel agents only for independent work with disjoint files and ready dependencies. Spread work across providers by fit, and do not leave a capable provider idle while another carries several slices.
 3. Use Claude freely for subagents: the plan has the headroom. Still balance load. Do not stack several slices on one provider while another is idle. The Tech Lead session itself also draws on Claude, so keep its own context small.
 4. Review with a different session. Prefer a different model family than the builder.
 5. Prefer a deterministic test over another model review when a test can prove the result.
