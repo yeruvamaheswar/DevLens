@@ -27,7 +27,7 @@ These are defaults. The Tech Lead picks the model per task and records the reaso
 4. Review with a different session. Prefer a different model family than the builder.
 5. Prefer a deterministic test over another model review when a test can prove the result.
 6. Give each agent only the files and context its slice needs. Do not rebuild context that evidence already holds.
-7. When a provider is unavailable (limit, expired login), move the slice to the next fit, and prefer Claude as that fallback. After a failed check, raise one agent by one level or switch to its fallback provider. Try three times at most, then stop and ask the user.
+7. Fallback order when a provider fails through T3 (limit, 401, expired login): (1) run the same task through that provider's own CLI from the terminal; (2) only if the CLI also fails, move the slice to the next fit provider; (3) Claude is the last fallback. Terminal runs are non-interactive and background: `codex exec --sandbox workspace-write -C <repo> "<brief>"`, `cursor-agent -p`, and the `grok` CLI. The same Files list, no-commit and no-install rules apply, and a different session still verifies the result. Checked 2026-10-26: `codex exec` worked while T3's Codex route returned 401. After a failed check, raise one agent by one level or switch to its fallback provider. Try three times at most, then stop and ask the user.
 8. If a provider reports a limit, switch to the slice's fallback and record it. Never invent usage numbers.
 9. Never claim an agent launched when it did not. If T3 cannot dispatch a model, write a manual handoff.
 
