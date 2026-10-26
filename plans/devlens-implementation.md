@@ -68,6 +68,7 @@ The authoritative wording, sources, and full NOT list are in [the approved-scope
 | DEC-5 | There is no fixed subagent count limit. Start parallel agents only for independent work with a clear speed or risk benefit, while respecting actual T3 capacity. Select each model when dispatching. Begin with the lowest capable model and effort; do not default to a high model. This user direction supersedes the earlier three-agent skill cap. | user |
 | DEC-6 | Run the separate architecture/security review before parallel implementation. | user skill |
 | DEC-7 | Treat the virtual desktop and week view as a post-fair contract gate. Do not invent their architecture for the Thursday demo. | agent, from contract timing |
+| DEC-9 | Provider routing and usage-limit rules live in the root `CLAUDE.md` (pointer in `AGENTS.md`). They apply to every agent. | user |
 | DEC-8 | Claude is always the Tech Lead. Claude owns slice release, model choice, interface decisions, review assignment, and integration oversight even when Codex or Cursor builds a slice. | user |
 
 ## Evals
