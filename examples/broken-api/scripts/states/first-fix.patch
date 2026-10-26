@@ -1,0 +1,8 @@
+--- a/src/client.js
++++ b/src/client.js
+@@ -1,4 +1,4 @@
+-const baseURL = 'https://example.invalid/v0';
++const baseURL = 'https://example.invalid/api';
+ 
+ export async function fetchCurrentUser(fetchImpl) {
+   const response = await fetchImpl(`${baseURL}/users/me`, {

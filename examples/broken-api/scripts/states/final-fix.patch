@@ -1,0 +1,17 @@
+--- a/src/client.js
++++ b/src/client.js
+@@ -1,10 +1,13 @@
+-const baseURL = 'https://example.invalid/v0';
++const baseURL = 'https://example.invalid/api';
+ 
++const sessionToken = 'session';
++
+ export async function fetchCurrentUser(fetchImpl) {
+   const response = await fetchImpl(`${baseURL}/users/me`, {
+     method: 'GET',
+     headers: {
+       Accept: 'application/json',
++      Authorization: `Bearer ${sessionToken}`,
+     },
+   });
+   if (!response.ok) {

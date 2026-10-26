@@ -9,6 +9,8 @@
     "demo:smoke": "tsx packages/core/smoke.ts",
     "ingest:fixture": "tsx packages/core/ingest.ts",
     "check:bundle": "tsx packages/core/bundle-check.ts",
+    "scenario:verify": "node examples/broken-api/scripts/scenario-verify.mjs",
+    "fixture:verify": "tsx examples/broken-api/scripts/fixture-verify.ts",
     "test:capture": "vitest run packages/capture",
     "probe:claude-hook": "tsx packages/capture/probe.ts",
     "test:sync": "vitest run packages/core/src/sync.test.ts",

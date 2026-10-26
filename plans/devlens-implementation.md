@@ -224,7 +224,7 @@ Routing reasons: Slice 1 and rule work need bounded code and tests, fitting Code
 - Fallback: Codex (auto)
 - Wave: 4 sequential
 - Depends on: slices 3, 4 and 5
-- Files: examples/broken-api/fixtures/, examples/broken-api/src/, examples/broken-api/tests/, examples/broken-api/README.md, packages/cli/src/link.ts (wire `attachMedia` only; Slice 5 is VERIFIED before this slice starts)
+- Files: examples/broken-api/fixtures/, examples/broken-api/src/, examples/broken-api/tests/, examples/broken-api/README.md, packages/cli/src/link.ts (wire `attachMedia` only; Slice 5 is VERIFIED before this slice starts), examples/broken-api/scripts/, examples/broken-api/RECORDING.md
 - Out of scope: packages/, apps/web/, other examples
 - Accept: Starter test fails; plausible first fix fails a second assertion; final fix passes; reviewed JSONL contains linked IDs; reviewed WebM shows the chosen code window; a local commit trailer ties the session if local commits are authorized.
 - Verify: `npm run scenario:verify -- broken-api && npm run fixture:verify -- broken-api`; reviewer manually plays the full take at normal speed and checks redaction before any public commit.
