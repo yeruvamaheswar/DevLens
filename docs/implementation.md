@@ -8,13 +8,14 @@ Share this page with the team. It is the build spec for the AITX hackathon.
 - Repo: https://github.com/yeruvamaheswar/DevLens
 - Decision list: [plans/devlens.contract.md](../plans/devlens.contract.md)
 
-The finished code shows what was built. DevLens shows which check failed, what the person answered, what changed, and which later test passed. A judge clicks that claim and sees the window, the event, the diff, and the test. The page does not score anyone.
+The finished code shows what was built. DevLens shows which check failed, what the person answered, what changed, and which later test passed. A judge clicks that claim and sees the screen recording, the event, the diff, and the test. Events and the recording live in Supabase. The page does not score anyone.
 
 ## Done
 
 Thursday, 29 October 2026, 3:00 PM Central, all of these are true:
 
-- `npm run demo` shows the chain with the network off.
+- `npm run demo` shows the chain from Supabase, including the screen recording.
+- `npm run demo --offline` shows the same chain from local files with the network off.
 - One click opens a real event from the fixture.
 - The sandbox result is on the page, or the page says the re-run is not in this build.
 - The page has no score, rank, or hire recommendation.
@@ -33,7 +34,7 @@ Thursday noon: freeze. Revert anything that breaks `npm run demo`. Use 1:00–4:
 ## What the judge must be able to do
 
 1. See a small project whose API client is broken. The starter test already fails.
-2. Watch a consented recording of a code window. Claude Code tries a fix. That fix fails a second assertion.
+2. Watch a consented screen recording of the code window. Claude Code tries a fix. That fix fails a second assertion. The recording is the file in Supabase Storage.
 3. See DevLens ask what failed. The question names the test. The developer types an answer in their own words.
 4. See the developer change approach. The test passes.
 5. Open Replay. Click "the later test verifies the second patch."
@@ -51,7 +52,7 @@ One person can hold two roles. Do not edit another role's files on the critical 
 |---|---|---|
 | Demo | `examples/broken-api`, README, Loom, Airtable form | Core packages, except the task repo |
 | Capture | `packages/capture`, hook scripts, redaction, the WebM | The reviewer page |
-| Evidence | `packages/core`, `packages/link`, SQLite, rules, sandbox worker | Hook scripts and the reviewer page |
+| Evidence | `packages/core`, `packages/link`, `supabase/migrations`, rules, sandbox worker | Hook scripts and the reviewer page |
 | Dashboard | `apps/web` | Linker rules |
 
 Agree `packages/core/event.ts` before splitting. That file is the shared contract.
@@ -65,13 +66,14 @@ apps/web/questions.ts             three templates, event ids filled in
 packages/core/event.ts            event and edge types
 packages/core/src/sync.ts         media offset math
 packages/capture/                 devlens init, hook writer, redact.ts
-packages/link/                    rules, db.ts, rerun.ts
+packages/link/                    rules, supabase.ts, rerun.ts
+supabase/migrations/              tables, RLS, storage bucket
 examples/broken-api/              the task
 examples/broken-api/fixtures/session.jsonl
 examples/broken-api/fixtures/session.webm
 ```
 
-Stack: TypeScript CLI, one SQLite file, one Next.js page. No graph database. No login. No second service.
+Stack: TypeScript CLI, Supabase Postgres, Supabase Storage, one Next.js page. No graph database. No login. No second database.
 
 ## The task
 
@@ -94,13 +96,21 @@ The sandbox re-run passes on the final commit and fails on the first fix. Do not
 | Command | What it does | Passes when |
 |---|---|---|
 | `devlens init` | Writes project-local Claude settings and a hook that appends JSONL. Prints the notice. Installs a git trailer hook. | A throwaway `claude -p` prompt appends one redacted line |
-| `devlens link` | Runs the rules and writes edges | `devlens link --fixture` writes `devlens.db` |
+| `devlens link` | Runs the rules and writes edges to Supabase | `devlens link --fixture` upserts the fixture session |
 | `devlens rerun` | Re-runs the test command in a sandbox | The result is stored and labeled observed |
-| `devlens serve` | Serves the reviewer page | The timeline renders |
-| `devlens serve --fixture` | Serves the committed fixture | Works with the network off |
-| `npm run demo` | The one command in the README | A second teammate completes it after `npm install` |
+| `devlens serve` | Serves the reviewer page from Supabase | The timeline renders and the recording plays |
+| `npm run demo` | The README command | A second teammate completes it after `npm install` and a filled `.env` |
+| `npm run demo --offline` | Same page from the committed JSONL and WebM | Works with the network off |
 
-The fixture path needs no API key. Ship a `.env.example` anyway. The checklist asks for env setup.
+`.env.example` names the keys and does not contain them.
+
+| Name | Where it is used |
+|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | Browser and server |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Browser read only |
+| `SUPABASE_SECRET_KEY` | CLI ingest and signed upload URLs. Never `NEXT_PUBLIC_`. |
+
+If the project still shows the legacy anon key, that key may be the publishable key for this demo. The secret key and the service-role key stay on the machine that runs the CLI.
 
 ## Notice the candidate sees
 
@@ -152,9 +162,11 @@ A link made only by overlapping timestamps is inferred. Say so.
 
 Run redaction before the event is appended. A unit test puts a fake `sk-` string in a payload and asserts that the file does not contain it. A denylist is enough if gitleaks is not installed. Do not send secrets to an online scanner. A human reads the fixture before it is committed. Redaction does not blur video. The developer reviews the recording and can delete it.
 
-### Window recording
+### Screen recording
 
-Use `getDisplayMedia` and `MediaRecorder`. Audio off.
+Screen recording is required. The judge must see the code window move, then click a claim and land on that moment.
+
+Use `getDisplayMedia` and `MediaRecorder`. Audio off. Record one window, not the whole desktop. Upload the WebM to the private Storage bucket `recordings` after the developer reviews it. `recording_ref` is the object path. Replay loads a short-lived signed URL created on the server. Do not make the bucket public.
 
 | Rule | Behavior |
 |---|---|
@@ -210,17 +222,28 @@ Work outside the hooked agent is `unattributed`. Never label it human. The page 
 
 ## Store
 
-SQLite. Three tables.
+Supabase Postgres. Three tables in `public`. Enable RLS on each table before any policy.
 
 ```text
-events(id, session_id, ts, seq, actor, type, source, provenance, recording_ref, media_offset_ms, payload json)
-entities(id, kind, attrs json)
-edges(id, src, dst, rel, derived_by, provenance, evidence_event_ids json)
+events(id, session_id, ts, seq, actor, type, source, provenance, recording_ref, media_offset_ms, payload jsonb)
+entities(id, kind, attrs jsonb)
+edges(id, src, dst, rel, derived_by, provenance, evidence_event_ids jsonb)
 ```
 
 `entities.kind` is `task`, `file`, `commit`, `test`, or `competency`.
 
 The model never inserts an edge. `derived_by` is a rule id.
+
+Create the migration with `supabase migration new devlens_evidence`. Do not invent the filename. Policies:
+
+| Role | events, entities, edges | `recordings` bucket |
+|---|---|---|
+| Publishable key | `SELECT` the fixture session only | No direct upload |
+| Secret key, CLI only | Insert and update the demo session | Upload the WebM. Server creates the signed read URL |
+
+The browser bundle must not contain the secret key. A unit or build check fails if `SUPABASE_SECRET_KEY` appears in client code.
+
+`devlens link` writes with the secret key. The reviewer page reads with the publishable key. If Supabase is unreachable, the page loads `examples/broken-api/fixtures/session.jsonl` and `session.webm` and shows the label "local fixture".
 
 ## Rules
 
@@ -256,7 +279,7 @@ A follow-up is allowed only when the answer names something that is also in the 
 
 ## Reviewer page
 
-`apps/web/replay/page.tsx` reads SQLite, or the fixture JSONL if the database step slipped. Network can be off when the WebM and the JSONL are local.
+`apps/web/replay/page.tsx` reads Supabase. The player source is the signed Storage URL. If that read fails, the page uses the local fixture and says so.
 
 One click sets `video.currentTime` and shows:
 
@@ -314,8 +337,8 @@ Search the page source for `score`, `rank`, and `hire`. Those strings must not a
 | Record the golden session and commit the trailer | Demo and Capture | JSONL has a failed test and a later pass | Hand-trim a probe log and label it |
 | Redact before append | Capture | EVAL: fake `sk-` is absent | Denylist regex |
 | Rule linker | Evidence | Unit test emits `verifies` with `derived_by` | Hand-built edges in the fixture |
-| SQLite load | Evidence | `devlens link --fixture` writes `devlens.db` | The page reads JSONL |
-| Consent page and window recording | Capture | A click records one window. A monitor choice is discarded | A labeled fixture WebM |
+| Supabase load | Evidence | `devlens link --fixture` upserts the session. RLS blocks a browser insert. | The page reads the local JSONL |
+| Consent page and screen recording | Capture | A click records one window, a monitor choice is discarded, and the WebM is in Storage | A labeled local WebM, played as the fixture |
 | Pause math and offsets | Evidence | The 5 second pause test passes | Document that the take is continuous |
 | One failure question and the typed answer | Dashboard | The answer text is on the event | A static question in the fixture |
 
@@ -325,7 +348,7 @@ Noon checkpoint: no linked failure and pass means stop feature work and fix capt
 
 | Task | Owner | Acceptance | If blocked |
 |---|---|---|---|
-| Player, markers, diff, test, question, answer | Dashboard | Click seeks. Network off. | Static HTML plus a video element |
+| Player, markers, diff, test, question, answer | Dashboard | Click seeks the Storage recording. Offline fallback still seeks. | Static HTML plus the local WebM |
 | Sandbox re-run | Evidence | Worker result is labeled observed | Show the session test line and say the re-run is manual |
 | Three questions | Dashboard | Each has an event id. No score. | Static questions in the fixture |
 | Unknowns panel | Dashboard | Unattributed and inferred counts are visible | A written limitations box |
@@ -379,11 +402,14 @@ flowchart LR
   rec[Window recorder]
   sync[Clock sync]
   rules[Rule linker]
-  db[(SQLite)]
+  db[(Supabase Postgres)]
+  video[(Supabase Storage)]
   worker[Test re-run]
   replay[Replay page]
   task --> hooks --> redact --> sync
-  rec --> sync --> db
+  rec --> video
+  sync --> db
+  video --> replay
   db --> rules --> db
   db --> worker --> db
   db --> replay
@@ -428,11 +454,13 @@ When asked "is it an agent?": the capture is hooks. The agent is the worker that
 | Must ship | Only after the Tuesday noon fixture |
 |---|---|
 | Fixture timeline and one clickable edge | Live capture at the judging table |
-| Window recording, or a labeled fixture WebM | FFmpeg clips |
-| Sandbox re-run, or an honest omission | Cursor or Codex adapters |
-| Three cited questions and the unknowns panel | A synthetic week strip, labeled synthetic |
-| No score | A deployed URL |
-| README and Loom | An LLM narrative |
+| Screen recording in Supabase Storage, or a labeled local WebM | FFmpeg clips |
+| Supabase Postgres for events and edges | Cursor or Codex adapters |
+| Offline fallback if Supabase is unreachable | A synthetic week strip, labeled synthetic |
+| Sandbox re-run, or an honest omission | An LLM narrative |
+| Three cited questions and the unknowns panel | — |
+| No score | — |
+| README and Loom | — |
 
 ## Do not build
 
@@ -449,6 +477,8 @@ Scores, ranks, competency met or unmet, cheating verdicts, camera, microphone, f
 | Edges exist | Unit test on the fixture | Tuesday |
 | Monitor rejected | Browser check | Tuesday |
 | Re-run result | Worker test against the two commits | Wednesday |
-| Offline demo | `npm run demo` with the network off | Wednesday |
+| Supabase demo | `npm run demo` plays the Storage recording | Wednesday |
+| Secret key stays server-side | Client bundle does not contain `SUPABASE_SECRET_KEY` | Wednesday |
+| Offline demo | `npm run demo --offline` with the network off | Wednesday |
 | No verdict language | Search the page source | Wednesday |
 | Second machine | A teammate follows the README | Wednesday |

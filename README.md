@@ -20,9 +20,9 @@ What must ship:
 - A Claude Code session captured as redacted events
 - Fixed rules that link a failed test to the later passing test
 - A window recording the developer chose, synced to those events
-- A reviewer page that plays that recorded session with the network off
+- A reviewer page that plays that recording from Supabase, with a local fallback if the network fails
 - Three cited questions, an unknowns panel, and no score
 
 ## Stack
 
-TypeScript CLI, SQLite, and a Next.js page.
+TypeScript CLI, Supabase Postgres, Supabase Storage, and a Next.js page.

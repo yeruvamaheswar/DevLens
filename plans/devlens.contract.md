@@ -4,10 +4,10 @@ title: DevLens hackathon scope
 status: active
 updated: 2026-10-26
 ---
-Summary: Ship a consented evidence agent that links one failed API test to the later pass, and lets a judge click that claim.
+Summary: Ship a consented evidence agent on Supabase whose screen recording lets a judge click from a failed test to the later pass.
 Goal: A working Antler Agents demo submitted before Thursday 29 October 2026, 5:00 PM Central.
-Rules: Fixture is the product · No score · Window only · Thursday noon freeze
-Intent: Add the full scope to win this hackathon to the repo.
+Rules: Supabase is the store · Window recording is required · Local fixture if the network fails · No score · Thursday noon freeze
+Intent: Use Supabase as the database, record the screen, and win this hackathon.
 Not wanted: scores · ranks · hire recommendations · camera · microphone · full desktop · week-long capture · graph database · a second coding agent on the critical path
 
 Track: Antler Agents
@@ -36,7 +36,8 @@ Repo: https://github.com/yeruvamaheswar/DevLens
 - Team roster: unknown
 - Interactive Claude hook trust before the folder is trusted: unknown
 - `PostToolUseFailure` on a real failing test: unknown
-- Deployed URL: unknown
+- Supabase project ref: unknown
+- Deployed replay URL: unknown
 
 ## Requirements
 | ID | Requirement | Source |
@@ -48,10 +49,10 @@ Repo: https://github.com/yeruvamaheswar/DevLens
 | REQ-5 | One task repo has a broken API client. The starter test fails. A plausible first fix fails a second assertion. A later change passes. Both commits stay. | agent |
 | REQ-6 | Fixed rules write a `verifies` edge from the later passing test to the second patch. Each edge stores `derived_by` and event ids. The model does not insert edges. | agent |
 | REQ-7 | A worker re-runs the tests. That result is stored and labeled separately from the session's own test line. | agent |
-| REQ-8 | A reviewer click seeks the window recording to that event and shows the diff, the test output, the question, and the answer on one screen. | agent |
+| REQ-8 | A reviewer click seeks the screen recording to that event and shows the diff, the test output, the question, and the answer on one screen. | user |
 | REQ-9 | The reviewer sees at least three questions. Each question cites event ids. | user |
 | REQ-10 | The page lists unknowns: unattributed changes, inferred edges, and no claim that the session predicts job performance. | agent |
-| REQ-11 | `npm run demo` renders the fixture chain with the network off. | agent |
+| REQ-11 | `npm run demo` reads the fixture from Supabase. `npm run demo --offline` renders the same chain from local files with the network off. | agent |
 | REQ-12 | A secret in the capture stream is absent from the exported JSON. Redaction runs before the event is appended. | user |
 | REQ-13 | The public README has a quick start, the stack, an architecture diagram, env setup, data provenance, limitations, and next steps. A 2–5 minute Loom exists. The Airtable form is submitted before the deadline. | user |
 | REQ-14 | The page states what was not captured: reasoning, the editor, other terminals, camera, and microphone. | user |
@@ -59,16 +60,19 @@ Repo: https://github.com/yeruvamaheswar/DevLens
 | NOT-2 | The product must not record the camera, the microphone, the full desktop, or keystroke timing. | user |
 | NOT-3 | The critical path must not add Cursor, Codex, a graph database, login, an ATS, billing, or a seven-day capture. | agent |
 | NOT-4 | A synthetic multi-day strip, if shown, must be labeled synthetic. It must not be described as a real week. | agent |
+| REQ-15 | Events, entities, and edges are rows in Supabase Postgres. RLS is enabled. The browser never receives the secret key. | user |
+| REQ-16 | The screen recording of the chosen window is stored in Supabase Storage. Replay plays that file. | user |
 | NOT-5 | The judging-table demo must not depend on a live model call. | agent |
+| NOT-6 | The Supabase secret key must not be in a `NEXT_PUBLIC_` variable or in the browser bundle. | agent |
 
 ## Decisions
 | ID | Decision | By |
 |---|---|---|
 | DEC-1 | Build the competitive slice: hooks, rule edges, sandbox re-run, clickable replay, questions, and redaction. The fixture is the safety net. | agent |
 | DEC-2 | Enter Antler Agents. The form has no Open track. The agent does the re-run. A passive log summary is not the demo. | agent |
-| DEC-3 | Store events, entities, and edges in SQLite. Traversals are one to three hops. | agent |
+| DEC-3 | Store events, entities, and edges in Supabase Postgres. Store the screen recording in Supabase Storage. Traversals stay one to three hops. No graph database. | user |
 | DEC-4 | Claude Code is the only agent adapter on the critical path. Record the fixture early. | agent |
-| DEC-5 | Capture is `getDisplayMedia` plus `MediaRecorder` for one window. ScreenCaptureKit, Screenpipe, OBS, and rrweb are not the recorder. | agent |
+| DEC-5 | Screen recording is required. Capture is `getDisplayMedia` plus `MediaRecorder` for one window, then upload to Storage. A full monitor is rejected. ScreenCaptureKit, Screenpipe, OBS, and rrweb are not the recorder. | user |
 | DEC-6 | Claims come from hooks, git, and tests. The video is the picture of those claims. A video model does not invent a claim. | agent |
 | DEC-7 | Freeze features at Thursday 29 October 2026, noon Central. 1:00–4:00 PM is for submission. | agent |
 | DEC-8 | If the fixture has no linked failure and pass by Tuesday 27 October 2026, noon Central, stop this build. | agent |
@@ -87,22 +91,26 @@ Repo: https://github.com/yeruvamaheswar/DevLens
 | EVAL-8 | REQ-8 | Clicking the failure sets the player time and shows the diff, the test, the question, and the answer. | browser | not run |
 | EVAL-9 | REQ-9, NOT-1 | Three questions each show an event id. Page source has no score, rank, or hire recommendation. | verifier diff | not run |
 | EVAL-10 | REQ-10, REQ-14 | Unknowns and the not-captured list are visible on the fixture page. | browser | not run |
-| EVAL-11 | REQ-11, NOT-5 | `npm run demo` works with the network disabled and with no API key. | integration | not run |
+| EVAL-11 | REQ-11, NOT-5 | `npm run demo` loads the fixture from Supabase. `npm run demo --offline` works with the network disabled. | integration | not run |
 | EVAL-12 | REQ-12 | A fake `sk-` string in a hook payload is absent from the JSONL file. | unit | not run |
 | EVAL-13 | REQ-13 | README sections exist, the Loom is 2–5 minutes, and the form is in before 5:00 PM Central on 29 October. | human | not run |
 | EVAL-14 | NOT-3, NOT-4 | The demo repo has one agent adapter. Any extra day strip is visibly labeled synthetic. | human | not run |
+| EVAL-15 | REQ-15, NOT-6 | RLS is on. The publishable key can read the fixture and cannot insert. The secret key is absent from the client bundle. | integration | not run |
+| EVAL-16 | REQ-16, REQ-8 | Replay plays the Storage object and seeks it from a claim click. | browser | not run |
 
 ## Infrastructure
 | Resource | Defined in | Applied by | Secrets |
 |---|---|---|---|
 | TypeScript CLI and Next.js app | `package.json` | `npm install` | none |
 | Claude Code project hooks | `.claude/settings.local.json` | `devlens init` | none |
-| Event store | `packages/link/db.ts` | `devlens link` | none |
+| Supabase Postgres | `supabase/migrations` | `supabase db push` | `SUPABASE_SECRET_KEY` |
+| Supabase Storage bucket `recordings` | `supabase/migrations` | upload after stop | `SUPABASE_SECRET_KEY` |
+| Browser read | `apps/web` | publishable key | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` |
 | Broken API task and fixture | `examples/broken-api` | `npm test` and `npm run demo` | none |
-| Window recording | `apps/web/record/page.tsx` | browser `getDisplayMedia` | none |
+| Screen recording | `apps/web/record/page.tsx` | browser `getDisplayMedia` | none |
 | Reviewer player | `apps/web/replay/page.tsx` | `npm run demo` | none |
 | GitHub repository | manual | `gh` | none |
-| Public deploy | none | — | none |
+| Public deploy | unknown | — | none |
 
 ## Observability
 | Signal | Seen in | Eval |
@@ -111,7 +119,9 @@ Repo: https://github.com/yeruvamaheswar/DevLens
 | Secret stripped before write | unit test output | EVAL-12 |
 | Sandbox pass or fail | reviewer page, separate from the session line | EVAL-7 |
 | Score language absent | page source search | EVAL-9 |
-| Fixture demo started with no network | local server log | EVAL-11 |
+| Supabase read succeeded | reviewer page and browser network log | EVAL-15 |
+| Offline fallback started | local server log | EVAL-11 |
+| Recording uploaded | Storage object for `recording_ref` | EVAL-16 |
 
 ## Architecture
 ```mermaid
@@ -122,11 +132,14 @@ flowchart LR
   rec[Window recorder]
   sync[Clock sync]
   rules[Rule linker]
-  db[(SQLite)]
+  db[(Supabase Postgres)]
+  video[(Supabase Storage)]
   worker[Test re-run]
   replay[Replay page]
   task --> hooks --> redact --> sync
-  rec --> sync --> db
+  rec --> video
+  sync --> db
+  video --> replay
   db --> rules --> db
   db --> worker --> db
   db --> replay
@@ -171,23 +184,23 @@ Loom storyboard, recorded after the Thursday noon freeze: failing test, bad patc
 - Files: `examples/broken-api/fixtures/session.jsonl`, `packages/capture/redact.ts`, `packages/link`
 - [ ] Record the golden session with a failed test and a later pass · Cursor · JSONL contains both test results · label a hand-trimmed probe log
 - [ ] Strip a fake key before append · Cursor · EVAL-12 · denylist regex only
-- [ ] Load events to SQLite and emit the verifies edge · Cursor · EVAL-6 · hand-built edges in the fixture
+- [ ] Load events into Supabase and emit the verifies edge · Cursor · EVAL-6 and EVAL-15 · hand-built edges in the local fixture
 
 ### Slice 3: Replay capture
-- Covers: REQ-1, REQ-2, REQ-3, REQ-8
+- Covers: REQ-1, REQ-2, REQ-3, REQ-8, REQ-16
 - Model: Cursor (auto)
 - Depends on: Slice 1
 - Files: `apps/web/record/page.tsx`, `packages/core/src/sync.ts`, `examples/broken-api/fixtures/session.webm`
-- [ ] Record one chosen window to a local WebM and reject a monitor · Cursor · EVAL-1 and EVAL-2 · commit a labeled fixture WebM
+- [ ] Record one chosen window, reject a monitor, and upload the WebM to Storage · Cursor · EVAL-1, EVAL-2, and EVAL-16 · commit a labeled fixture WebM and play that file
 - [ ] Store `recording_ref` and `media_offset_ms` on hook events · Cursor · EVAL-3 · show events with no video
 - [ ] On test failure, store one typed answer with no trait language · Cursor · answer text is on the event · static question in the fixture
 
 ### Slice 4: Reviewer page
-- Covers: REQ-7, REQ-8, REQ-9, REQ-10, REQ-11, REQ-14, NOT-1
+- Covers: REQ-7, REQ-8, REQ-9, REQ-10, REQ-11, REQ-14, REQ-15, NOT-1, NOT-6
 - Model: Cursor (auto)
 - Depends on: Slice 2, Slice 3
 - Files: `apps/web/replay/page.tsx`, `apps/web/questions.ts`, `packages/link/rerun.ts`
-- [ ] Seek the player from a claim with the network off · Cursor · EVAL-8 and EVAL-11 · static HTML plus a video element
+- [ ] Seek the Storage recording from a claim, and keep an offline fallback · Cursor · EVAL-8, EVAL-11, and EVAL-16 · static HTML plus the local WebM
 - [ ] Show the sandbox result · Cursor · EVAL-7 · omit the panel and say the re-run is manual
 - [ ] Show three cited questions and the unknowns panel · Cursor · EVAL-9 and EVAL-10 · static questions in the fixture
 
@@ -203,13 +216,16 @@ Loom storyboard, recorded after the Thursday noon freeze: failing test, bad patc
 | Must ship | Later, only after Tuesday noon fixture |
 |---|---|
 | Fixture timeline and one clickable edge | Live capture at the judging table |
-| Window recording or a labeled fixture WebM | FFmpeg clips |
-| Sandbox re-run or an honest omission | Cursor or Codex adapters |
-| Three cited questions and the unknowns panel | Synthetic week strip |
-| No score | Deployed URL |
-| README and Loom | LLM narrative |
+| Screen recording in Supabase Storage, or a labeled local WebM | FFmpeg clips |
+| Supabase Postgres for events and edges | Cursor or Codex adapters |
+| Offline fallback if Supabase is unreachable | Synthetic week strip |
+| Sandbox re-run or an honest omission | LLM narrative |
+| Three cited questions and the unknowns panel | — |
+| No score | — |
+| README and Loom | — |
 
 ## Changes
 | ID | Date | Change | Affects | Approved |
 |---|---|---|---|---|
 | CR-1 | 2026-10-26 | Winning scope added to the public repo from the same-day research. | REQ-1 through NOT-5 | user asked to add the scope |
+| CR-2 | 2026-10-26 | Database is Supabase Postgres. Screen recording is required and stored in Supabase Storage. The full desktop stays out. Offline fixture remains the table fallback. | DEC-3, DEC-5, REQ-8, REQ-11, REQ-15, REQ-16, NOT-6 | user |
