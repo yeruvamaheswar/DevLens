@@ -12,6 +12,8 @@ AITX and MLOps World Community Hackathon, Antler Agents track. Submission deadli
 
 Teammates: the implementation spec is [docs/implementation.md](docs/implementation.md).
 
+How this differs from competitors: [docs/competitors.md](docs/competitors.md). The page is [plans/competitors.html](plans/competitors.html).
+
 The decision list is [plans/devlens.contract.md](plans/devlens.contract.md). The page is [plans/devlens.contract.html](plans/devlens.contract.html).
 
 The short explainer is [plans/hackathon-explainer.md](plans/hackathon-explainer.md). The page is [plans/hackathon-explainer.html](plans/hackathon-explainer.html).

@@ -7,6 +7,7 @@ Share this page with the team. It is the build spec for the AITX hackathon.
 - Hack Fair: Friday, 30 October 2026, 1:00 PM Central
 - Repo: https://github.com/yeruvamaheswar/DevLens
 - Decision list: [plans/devlens.contract.md](../plans/devlens.contract.md)
+- How this differs: [docs/competitors.md](competitors.md)
 
 The finished code shows what was built. DevLens shows which check failed, what the person answered, what changed, and which later test passed. A judge clicks that claim and sees the screen recording, the event, the diff, and the test. Events and the recording live in Supabase. The page does not score anyone.
 
