@@ -10,7 +10,9 @@ AITX and MLOps World Community Hackathon, Antler Agents track. Submission deadli
 
 ## Scope
 
-The full hackathon scope is [plans/devlens.contract.md](plans/devlens.contract.md). The page is [plans/devlens.contract.html](plans/devlens.contract.html).
+Teammates: the implementation spec is [docs/implementation.md](docs/implementation.md).
+
+The decision list is [plans/devlens.contract.md](plans/devlens.contract.md). The page is [plans/devlens.contract.html](plans/devlens.contract.html).
 
 What must ship:
 
