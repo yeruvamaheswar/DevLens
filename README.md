@@ -8,12 +8,18 @@ The page does not score, rank, or recommend a hire.
 
 AITX and MLOps World Community Hackathon, Antler Agents track. Submission deadline: Thursday, 29 October 2026, 5:00 PM Central.
 
-## What this repository will hold
+## Scope
+
+The full hackathon scope is [plans/devlens.contract.md](plans/devlens.contract.md). The page is [plans/devlens.contract.html](plans/devlens.contract.html).
+
+What must ship:
 
 - One small task whose API integration is broken
 - A Claude Code session captured as redacted events
 - Fixed rules that link a failed test to the later passing test
+- A window recording the developer chose, synced to those events
 - A reviewer page that plays that recorded session with the network off
+- Three cited questions, an unknowns panel, and no score
 
 ## Stack
 
