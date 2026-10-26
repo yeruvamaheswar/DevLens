@@ -12,3 +12,5 @@ dist/
 
 *.tsbuildinfo
 apps/web/AGENTS.md
+
+.devlens/

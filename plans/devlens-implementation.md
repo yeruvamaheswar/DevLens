@@ -192,7 +192,7 @@ Routing reasons: Slice 1 and rule work need bounded code and tests, fitting Code
 - Fallback: Codex (auto)
 - Wave: 3 parallel
 - Depends on: slice 2
-- Files: apps/web/record/, apps/web/api/recordings/, packages/core/src/sync.ts
+- Files: apps/web/record/, apps/web/api/recordings/, packages/core/src/sync.ts, apps/web/app/record/page.tsx, apps/web/app/api/recordings/ (one-line wrappers only)
 - Out of scope: apps/web/replay/, packages/capture/, desktop mode
 - Accept: Page load captures nothing; window mode rejects a monitor; audio and camera tracks are absent; pause math excludes a five-second pause; stop or sharing-end closes the take; developer can play or delete before upload.
 - Verify: `npm run test:sync && npm run test:record`; reviewer runs a real supported browser check with a chosen window and inspects the private Storage object.
@@ -210,7 +210,7 @@ Routing reasons: Slice 1 and rule work need bounded code and tests, fitting Code
 - Depends on: slice 2
 - Files: packages/link/src/rules.ts, packages/link/src/rerun.ts, packages/link/tests/, packages/cli/src/link.ts, packages/cli/src/rerun.ts
 - Out of scope: packages/core/, supabase/migrations/, apps/web/
-- Accept: Fixed rules use event IDs and `derived_by`; an unhooked edit is unattributed; the same test command is re-run in a bounded sandbox; session output and re-run output have different provenance.
+- Accept: Fixed rules use event IDs and `derived_by`; an unhooked edit is unattributed; the same test command is re-run in a bounded sandbox; session output and re-run output are both `observed` but differ by `source` (`claude_code_hook` vs `sandbox`) and stay visibly separate.
 - Verify: `npm run test:link && npm run test:rerun`; reviewer checks fixture edges and both first-fix failure and final-fix pass.
 - State: PLANNED
 - Evidence: none
@@ -224,7 +224,7 @@ Routing reasons: Slice 1 and rule work need bounded code and tests, fitting Code
 - Fallback: Codex (auto)
 - Wave: 4 sequential
 - Depends on: slices 3, 4 and 5
-- Files: examples/broken-api/fixtures/, examples/broken-api/src/, examples/broken-api/tests/, examples/broken-api/README.md
+- Files: examples/broken-api/fixtures/, examples/broken-api/src/, examples/broken-api/tests/, examples/broken-api/README.md, packages/cli/src/link.ts (wire `attachMedia` only; Slice 5 is VERIFIED before this slice starts)
 - Out of scope: packages/, apps/web/, other examples
 - Accept: Starter test fails; plausible first fix fails a second assertion; final fix passes; reviewed JSONL contains linked IDs; reviewed WebM shows the chosen code window; a local commit trailer ties the session if local commits are authorized.
 - Verify: `npm run scenario:verify -- broken-api && npm run fixture:verify -- broken-api`; reviewer manually plays the full take at normal speed and checks redaction before any public commit.

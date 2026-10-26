@@ -170,7 +170,7 @@ Event fields: `id`, `session_id`, `ts`, `actor`, `type`, `source`, `provenance`,
 
 Edge relations used in the demo: `prompted`, `called`, `edited`, `ran_test`, `failed`, `supersedes`, `verifies`, `cites`.
 
-`actor` is `developer`, `agent`, `tool`, or `ci`. `provenance` is `observed` or `inferred`. Unhooked edits are `unattributed`, not human.
+`actor` is `developer`, `agent`, `tool`, `ci`, or `unknown`. Unhooked work is `actor: unknown` with `payload.attribution: unattributed`. `provenance` is `observed` or `inferred`. Unhooked edits are `unattributed`, not human.
 
 ## Demo
 | Time | Action | Line |
@@ -289,3 +289,4 @@ Each scenario keeps the same shape. The starter fails. A plausible first fix fai
 | CR-1 | 2026-10-26 | Winning scope added to the public repo from the same-day research. | REQ-1 through NOT-5 | user asked to add the scope |
 | CR-2 | 2026-10-26 | Database is Supabase Postgres. Screen recording is required and stored in Supabase Storage. The full desktop stays out. Offline fixture remains the table fallback. | DEC-3, DEC-5, REQ-8, REQ-11, REQ-15, REQ-16, NOT-6 | user |
 | CR-3 | 2026-10-26 | Add at least seven scenarios and opt-in desktop capture. Virtual desktop and the week-long project are later. Extra scope waits until the golden replay works. | REQ-17, REQ-18, REQ-19, REQ-20, REQ-21, NOT-2, NOT-3, DEC-10, DEC-11, DEC-12 | user |
+| CR-4 | 2026-10-26 | Clarify: `actor` also allows `unknown`, as `docs/implementation.md` already says. No requirement changes. | Architecture | pending user note |

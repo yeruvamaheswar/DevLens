@@ -197,7 +197,7 @@ Do not build ScreenCaptureKit, Screenpipe, OBS, rrweb, on-device OCR, or a video
 
 1. When `MediaRecorder.start()` is called, store `wall_start` from `Date.now()`. Media time 0 is that call, not the button click. The picker sits between the click and the start.
 2. Media time does not advance while paused.
-3. `media_offset_ms = event_ts - wall_start - paused_overlap`.
+3. `media_offset_ms = event_ts - wall_start - paused_overlap`. It is null only before the take starts, after it ends, or inside a pause.
 4. Seek with `currentTime = media_offset_ms / 1000`.
 5. Give every event a monotonic `seq`. Sort by `event_ts`, then `seq`.
 6. If the hook clock and the media offset disagree by more than two seconds, show the offset. Do not hide it.
@@ -267,7 +267,7 @@ The browser bundle must not contain the secret key. A unit or build check fails 
 | 2 | An edit tool names a path. | `edited` | observed |
 | 3 | A test command after that edit names the same files, or runs in the same tool span. | `ran_test` | inferred, unless it is in the same span |
 | 4 | Failure comes from `PostToolUseFailure` or parsed output. | `failed` | inferred until the sandbox runs |
-| 5 | A later passing test on the same files, after a failing test, links the pass to the second patch and marks the first patch replaced. | `verifies`, `supersedes` | inferred, unless the sandbox observed the pass |
+| 5 | A later passing test on the same files, after a failing test, links the pass to the second patch and marks the first patch replaced. | `verifies`, `supersedes` | inferred, unless the sandbox observed the pass. Real hook test events carry no `files`; `rules.ts` matches the same test `command` plus the `file_edit` events between the failure and the pass, and `linkTracer` stays fixture-only. |
 | 6 | The worker re-runs the same test command. | sandbox result | observed |
 | 7 | A competency row appears only when its rule matches. The row is a count of events. | `cites` | rule id |
 
