@@ -1,0 +1,28 @@
+{
+  "name": "devlens",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test:tracer": "vitest run packages/core/tracer.test.ts",
+    "demo": "tsx packages/core/demo.ts",
+    "demo:smoke": "tsx packages/core/smoke.ts",
+    "ingest:fixture": "tsx packages/core/ingest.ts",
+    "check:bundle": "tsx packages/core/bundle-check.ts",
+    "build": "next build apps/web"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.57.0",
+    "next": "^16.4.3",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "vitest": "^5.0.5"
+  }
+}
