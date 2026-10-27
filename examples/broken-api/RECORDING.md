@@ -27,8 +27,10 @@ It prints a temp directory outside this repo. That directory is a git repo with 
 5. Paste this prompt. Do not add a hint about any later failure:
 
 ```
-Run `npm test`. Fix only the failure it prints, then stop and leave the test result visible. Do not guess at further changes.
+Run `npm test` exactly as written, with no pipes or extra flags, every time you run the tests. Fix only the failure it prints, then stop and leave the test result visible. Do not guess at further changes.
 ```
+
+The verifier matches the failed and the passed test by the exact command string. A command such as `npm test 2>&1 | tail -20` will not match `npm test`, so a take with mixed commands is rejected.
 
 6. When Claude stops, run `npm test` yourself. The starter names the first failure. After that edit, the test still fails. Do not tell Claude why. If Claude changed the test, README, or package.json, restore them, then commit only the client. Do not squash.
 

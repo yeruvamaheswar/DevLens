@@ -9,7 +9,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const exampleRoot = path.resolve(here, '..');
 const repoRoot = path.resolve(exampleRoot, '../..');
 const starterFiles = ['package.json', 'README.md', 'src/client.js', 'tests/client.test.js'];
-const prompt = 'Run `npm test`. Fix only the failure it prints, then stop and leave the test result visible. Do not guess at further changes.';
+const prompt = 'Run `npm test` exactly as written, with no pipes or extra flags, every time you run the tests. Fix only the failure it prints, then stop and leave the test result visible. Do not guess at further changes.';
 
 function gitValue(key) {
   return execFileSync('git', ['config', '--get', key], { cwd: repoRoot, encoding: 'utf8' }).trim();
