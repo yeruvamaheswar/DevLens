@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { fetchCurrentUser } from '../src/client.js';
 
+// The client reads this token from a module-level `sessionToken` constant in src/client.js.
 const sessionToken = 'session';
 
 function headerValue(headers, name) {
