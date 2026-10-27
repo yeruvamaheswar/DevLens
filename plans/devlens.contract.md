@@ -74,6 +74,10 @@ Repo: https://github.com/yeruvamaheswar/DevLens
 | NOT-6 | The Supabase secret key must not be in a `NEXT_PUBLIC_` variable or in the browser bundle. | agent |
 | REQ-22 | The replay may show the coding agent's model and token usage, read from consented local data, labeled as context with the price-table date and billing route. It is never a ratio, rank, or comparison. | user |
 | REQ-23 | A developer answer is stored verbatim, linked to its question id, and labeled `live` or `post_session` with its real time. | user |
+| REQ-24 | Questions come from fixed trigger rules that cite event ids. A model may only rephrase a rule-selected question, citing a subset of that rule's ids. Post-fair. | user |
+| NOT-7 | No model call without an explicit opt-in flag, a budget guard, a ledger entry, zero retries, and no automatic fallback to another or larger model. | user |
+| NOT-8 | DevLens never injects questions or hints into the coding agent's context. In assessment mode, a question never names a fix. | user |
+| NOT-9 | No cross-person comparison of usage, cost, time, or retries. | user |
 
 ## Decisions
 | ID | Decision | By |
@@ -90,6 +94,8 @@ Repo: https://github.com/yeruvamaheswar/DevLens
 | DEC-10 | Thursday replays one golden scenario. The other scenarios are tasks in the repo. Recording all seven is only if time permits after that replay works. | agent |
 | DEC-11 | Desktop mode accepts a monitor and labels the file desktop. Window mode still rejects a monitor. | agent |
 | DEC-12 | The downloadable virtual desktop and the week-long project are after the hackathon demo. | user |
+| DEC-13 | Product framing is "review questions" or "evidence-backed review companion", not "team lead". | user |
+| DEC-14 | Live questioning is post-fair. It starts with the technology-choice question (Review Questions C1) and test-failure question (T1), only at a Claude Code `Stop` boundary. Experiments E5 (silence) and E6 (interruptions) must pass before more triggers go live. | user |
 
 ## Evals
 | ID | REQ | Check | Method | Result |
@@ -115,6 +121,7 @@ Repo: https://github.com/yeruvamaheswar/DevLens
 | EVAL-19 | REQ-19, REQ-21 | `npm run demo` does not require a virtual desktop. The README names that download as later. | human | not run |
 | EVAL-21 | REQ-22, NOT-1 | A unit test reproduces the golden usage totals. The page has no efficiency, score, or rank words. | unit | not run |
 | EVAL-22 | REQ-23 | An answer renders verbatim with its label. The no-answer line shows only when no answer exists. | unit | not run |
+| EVAL-23 | REQ-24, NOT-1 | `npm run test:questions`: adding `react` asks one question naming Vue and Angular; `react-dom` after `react` asks nothing; a `devDependencies` test tool asks the test-framework question; no new dependency asks nothing. | unit | pass (2026-10-27, commit 7adfbfb) |
 | EVAL-20 | REQ-20, NOT-4, REQ-21 | The Thursday demo has no week strip, or any strip on screen is labeled "not in this build." | human | not run |
 
 ## Infrastructure
@@ -295,3 +302,4 @@ Each scenario keeps the same shape. The starter fails. A plausible first fix fai
 | CR-3 | 2026-10-26 | Add at least seven scenarios and opt-in desktop capture. Virtual desktop and the week-long project are later. Extra scope waits until the golden replay works. | REQ-17, REQ-18, REQ-19, REQ-20, REQ-21, NOT-2, NOT-3, DEC-10, DEC-11, DEC-12 | user |
 | CR-4 | 2026-10-26 | Clarify: `actor` also allows `unknown`, as `docs/implementation.md` already says. No requirement changes. | Architecture | pending user note |
 | CR-5 | 2026-10-27 | Thursday scope adds the usage-context panel and labeled post-session answers. Post-fair work is drafted in `plans/devlens-review-questions.md`, not approved. | REQ-22, REQ-23, EVAL-21, EVAL-22 | user chose A + H1a + H1b |
+| CR-6 | 2026-10-27 | Adds the Review Questions rules, post-fair. DEC-14 adapts the exploration plan's "T1 only" to the user's 2026-10-27 choice of live technology-choice questions. The Thursday scope is unchanged. | REQ-24, NOT-7, NOT-8, NOT-9, DEC-13, DEC-14, EVAL-23 | user approved 2026-10-27 |
