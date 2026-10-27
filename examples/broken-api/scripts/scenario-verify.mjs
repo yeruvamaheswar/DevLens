@@ -107,7 +107,7 @@ async function verifyAllStarters() {
       if (run.code === 0) {
         console.log(`${name}: FAIL: test unexpectedly passed`);
         ok = false;
-      } else if (!run.out.includes(expectedSubstring)) {
+      } else if (run.out.includes('SyntaxError') || !run.out.includes(`AssertionError [ERR_ASSERTION]: ${expectedSubstring}`)) {
         console.log(`${name}: FAIL: expected failure "${expectedSubstring}" not found in output`);
         ok = false;
       } else {
