@@ -48,3 +48,64 @@ export type ChoiceAnswer = {
   question_id: string; text: string; answered_at: string;
   delivery: 'live' | 'post_session'; actor: 'developer';
 };
+
+// ---- C2: live slot, caps, cooldown, follow-up (exploration plan section 6, contract DEC-14, NOT-8). ----
+// A question is shown in the DevLens panel only. It is never sent into the coding agent's context (NOT-8).
+
+export type LiveConfig = {
+  warmup_ms: number;            // no live question before session_start + warmup
+  cooldown_ms: number;          // min gap between two live questions
+  window_ms: number;            // rolling window for the live cap
+  max_live_per_window: number;
+  max_per_session: number;      // all questions, live and post-session, follow-ups included
+};
+
+// A follow-up after an answer names a term that a later diff changes. At most one per question.
+export type FollowUpQuestion = {
+  id: string;                   // `${parent_id}:follow`
+  rule_id: 'C2.follow_up.v1';
+  text: string;
+  parent_id: string; term: string; file: string;
+  evidence_event_ids: string[]; // the parent's ids plus the diff's ids
+};
+
+export type QuestionStatus =
+  | 'queued' | 'asked' | 'answered' | 'skipped' | 'deferred' | 'post_session' | 'suppressed' | 'expired';
+
+export type TrackedQuestion = {
+  question: ChoiceQuestion | FollowUpQuestion;
+  status: QuestionStatus;
+  queued_at_ms: number; asked_at_ms: number | null;
+  answer: ChoiceAnswer | null;
+  terms: string[];              // from the answer, for the follow-up match
+  follow_up_id: string | null;  // set once a follow-up was created
+};
+
+export type LiveState = {
+  session_id: string; session_start_ms: number; muted: boolean;
+  phase: 'live' | 'ended' | 'closed'; // set by session_end and report_close; never goes back
+  live_asked_at_ms: number[];   // times of live asks, for cooldown and the window cap
+  questions: TrackedQuestion[]; // in queue order
+};
+
+// A changed file. `added` holds the added lines only, without the leading '+'.
+export type DiffFile = { file: string; added: string[] };
+
+export type LiveInput =
+  | { kind: 'stop'; at_ms: number; event_id: string }                       // Claude Code Stop hook: the only live slot
+  | { kind: 'questions'; questions: ChoiceQuestion[]; at_ms: number }        // from askChoices
+  | { kind: 'answer'; question_id: string; text: string; at_ms: number }
+  | { kind: 'control'; action: 'not_now' | 'skip' | 'mute'; question_id: string | null; at_ms: number }
+  | { kind: 'diff'; files: DiffFile[]; event_ids: string[]; at_ms: number }
+  | { kind: 'session_end'; at_ms: number }                                    // queued and open asks move to post_session
+  | { kind: 'report_close'; at_ms: number };                                  // unanswered post_session/deferred become expired
+
+export type LiveStep = { state: LiveState; ask: TrackedQuestion | null };   // ask: the question to show now, if any
+
+// packages/questions/src/follow.ts exports (C2a):
+//   extractTerms(answer: string): string[]
+//   matchTerm(terms: string[], files: DiffFile[]): { term: string; file: string } | null
+//   followUpQuestion(parent: ChoiceQuestion, term: string, file: string, diff_event_ids: string[]): FollowUpQuestion
+// packages/questions/src/live.ts exports (C2b):
+//   DEFAULT_LIVE_CONFIG: LiveConfig, startLive(session_id: string, session_start_ms: number): LiveState,
+//   step(state: LiveState, input: LiveInput, config?: LiveConfig): LiveStep
