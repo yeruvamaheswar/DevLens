@@ -2,7 +2,8 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createClient } from '@supabase/supabase-js';
-import type { Edge, Event } from '../../core/event';
+import type { Edge, Event, RecordingMeta } from '../../core/event';
+import { attachMedia } from '../../core/src/sync';
 import { dedupeEvents, linkEvents } from '../../link/src/rules';
 
 // Replace-session writer. Service role stays in server env. Host must be the tracer project.
@@ -32,15 +33,16 @@ export function assertTracerProject(url: string): void {
 }
 
 function usage(): never {
-  throw new Error('Usage: devlens link --fixture [--dry-run] | devlens link <events.jsonl> [--rerun <rerun.jsonl>] [--dry-run]');
+  throw new Error('Usage: devlens link --fixture [--dry-run] | devlens link <events.jsonl> [--recording <meta.json>] [--rerun <rerun.jsonl>] [--dry-run]');
 }
 
-export function parseLinkArgs(argv: readonly string[]): { fixture: boolean; dryRun: boolean; events?: string; rerun?: string } {
+export function parseLinkArgs(argv: readonly string[]): { fixture: boolean; dryRun: boolean; events?: string; rerun?: string; recording?: string } {
   const args = argv[0] === 'link' ? argv.slice(1) : [...argv];
   let fixture = false;
   let dryRun = false;
   let events: string | undefined;
   let rerun: string | undefined;
+  let recording: string | undefined;
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
     if (arg === '--fixture') fixture = true;
@@ -48,12 +50,15 @@ export function parseLinkArgs(argv: readonly string[]): { fixture: boolean; dryR
     else if (arg === '--rerun') {
       rerun = args[++i];
       if (!rerun) usage();
+    } else if (arg === '--recording') {
+      recording = args[++i];
+      if (!recording) usage();
     } else if (arg.startsWith('--')) usage();
     else if (!events) events = arg;
     else usage();
   }
-  if (fixture === Boolean(events) || (fixture && rerun)) usage();
-  return { fixture, dryRun, events, rerun };
+  if (fixture === Boolean(events) || (fixture && (rerun || recording))) usage();
+  return { fixture, dryRun, events, rerun, recording };
 }
 
 async function readJsonl(file: string, orderStart: number): Promise<Loaded[]> {
@@ -74,6 +79,17 @@ async function readJsonl(file: string, orderStart: number): Promise<Loaded[]> {
     loaded.push({ event, order: order++ });
   }
   return loaded;
+}
+
+async function readRecordingMeta(file: string): Promise<RecordingMeta> {
+  let parsed: unknown;
+  try { parsed = JSON.parse(await readFile(file, 'utf8')); } catch { throw new Error(`Cannot read recording metadata ${path.basename(file)}`); }
+  const meta = parsed as Partial<RecordingMeta> | null;
+  const validPauses = Array.isArray(meta?.pauses) && meta.pauses.every((p) => Number.isFinite(p?.pause_ms) && Number.isFinite(p?.resume_ms));
+  if (!meta || typeof meta.recording_ref !== 'string' || !meta.recording_ref || !Number.isFinite(meta.wall_start_ms) || !validPauses) {
+    throw new Error(`Recording metadata ${path.basename(file)} is missing recording_ref, wall_start_ms, or pauses`);
+  }
+  return meta as RecordingMeta;
 }
 
 export function planSession(loaded: readonly Loaded[]): Plan {
@@ -164,13 +180,22 @@ function loadServerEnv(): { url: string; secret: string } {
   return { url, secret };
 }
 
-export async function runLink(options: { fixture: boolean; dryRun: boolean; events?: string; rerun?: string }, client?: RpcClient): Promise<Plan> {
+export async function runLink(options: { fixture: boolean; dryRun: boolean; events?: string; rerun?: string; recording?: string }, client?: RpcClient): Promise<Plan> {
   const files: string[] = [];
   if (options.fixture) files.push(path.join(repoRoot, 'examples', 'broken-api', 'fixtures', 'session.jsonl'));
   else if (options.events) files.push(path.resolve(options.events));
   if (options.rerun) files.push(path.resolve(options.rerun));
+  const meta = options.recording ? await readRecordingMeta(path.resolve(options.recording)) : null;
   let loaded: Loaded[] = [];
-  for (const file of files) loaded = loaded.concat(await readJsonl(file, loaded.length));
+  for (const [index, file] of files.entries()) {
+    let next = await readJsonl(file, loaded.length);
+    // Only the session file sits inside the recording window. The re-run file keeps its own null media fields.
+    if (meta && index === 0) {
+      const withMedia = attachMedia(next.map((item) => item.event), meta);
+      next = next.map((item, i) => ({ ...item, event: withMedia[i] }));
+    }
+    loaded = loaded.concat(next);
+  }
   const plan = planSession(loaded);
   console.log(`events: ${plan.events.length}`);
   console.log(`edges: ${plan.edges.length}`);

@@ -1,7 +1,8 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Event } from '../../../packages/core/event.ts';
+import type { Event, RecordingMeta } from '../../../packages/core/event.ts';
+import { attachMedia } from '../../../packages/core/src/sync.ts';
 import { linkEvents } from '../../../packages/link/src/rules.ts';
 
 const ACTORS = new Set<Event['actor']>(['developer', 'agent', 'tool', 'ci', 'unknown']);
@@ -193,6 +194,23 @@ function main(): void {
       }
     } catch (error) {
       problems.push(error instanceof Error ? error.message : 'linkEvents failed');
+    }
+  }
+
+  const metaPath = path.join(goldenDir, 'meta.json');
+  if (!existsSync(metaPath)) problems.push('meta.json is missing; copy the recording meta.json from private storage next to session.webm');
+  else {
+    try {
+      const meta = JSON.parse(readFileSync(metaPath, 'utf8')) as RecordingMeta;
+      const windowMs = meta.wall_end_ms == null ? null : meta.wall_end_ms - meta.wall_start_ms;
+      const linked = attachMedia(events, meta);
+      const outside = linked.filter((event) => event.media_offset_ms == null || event.recording_ref !== meta.recording_ref);
+      if (outside.length > 0) problems.push(`${outside.length} event(s) fall outside the recording window in meta.json`);
+      if (windowMs == null || windowMs <= 0) problems.push('meta.json has no usable recording window');
+      if (meta.audio_tracks !== 0 || meta.video_tracks !== 1 || meta.consent !== true) problems.push('meta.json does not show consent, one video track, and no audio');
+      if (meta.bytes != null && meta.bytes !== statSync(webmPath).size) problems.push('session.webm size does not match meta.json bytes');
+    } catch {
+      problems.push('meta.json is not valid JSON');
     }
   }
 
