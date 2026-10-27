@@ -1,9 +1,8 @@
 import assert from 'node:assert/strict';
 import { createClient } from '@supabase/supabase-js';
-import { loadReplay } from './server';
+import { goldenFile, goldenLabel, loadReplay } from './server';
 import type { Replay } from './event';
 import { readFile } from 'node:fs/promises';
-import { fixturePath } from './fixture';
 try { process.loadEnvFile?.('.env'); } catch { /* Offline command needs no environment file. */ }
 const offline = process.argv.includes('--offline');
 let failures = 0;
@@ -21,19 +20,37 @@ function skip(name: string, reason: string) {
  console.log(`SKIPPED(${reason}): ${name}`);
 }
 let replay: Replay | undefined;
+function assertGoldenChain(loaded: Replay) {
+ assert.equal(loaded.label, goldenLabel);
+ assert.equal(loaded.events.length, 31);
+ assert.equal(loaded.edges.length, 32);
+ assert(loaded.events.every((event) => event.session_id !== 'tracer-fixture-1'));
+ const verifies = loaded.edges.find((edge) => edge.rel === 'verifies' && edge.derived_by === 'rule-5-later-pass-v1');
+ assert(verifies);
+ const byId = new Map(loaded.events.map((event) => [event.id, event]));
+ const cited = verifies.evidence_event_ids.map((id) => byId.get(id));
+ assert(cited.every(Boolean));
+ const pass = cited.find((event) => event?.type === 'test' && event.payload.status === 'passed' && event.source !== 'sandbox');
+ assert(pass);
+ assert(cited.some((event) => event?.type === 'test' && event.payload.status === 'failed' && event.source !== 'sandbox'));
+ assert(loaded.events.some((event) => event.source === 'sandbox' && event.payload.signal === 'rerun' && event.payload.rerun_of === pass.id));
+ const first = loaded.events
+  .filter((event) => event.type === 'test' && event.source !== 'sandbox' && event.payload.status === 'failed')
+  .sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts))[0];
+ assert(first.media_offset_ms != null && first.media_offset_ms >= 25000 && first.media_offset_ms <= 40000);
+ assert(pass.media_offset_ms != null && pass.media_offset_ms >= 170000 && pass.media_offset_ms <= 185000);
+ assert(loaded.events.filter((event) => event.source !== 'sandbox').every((event) => event.media_offset_ms != null));
+ assert.equal(loaded.events.find((event) => event.source === 'sandbox')?.media_offset_ms ?? null, null);
+}
 await check('replay fixture', async () => {
  replay = await loadReplay(offline);
- assert.equal(replay.label, 'tracer fixture, hand-authored');
+ assertGoldenChain(replay);
+ if (offline) assert.equal(replay.mode, 'local fixture');
 });
-if (replay) {
- const loaded = replay;
- await check('deterministic link', () => {
-  assert(loaded.edges.some(e => e.rel === 'verifies' && e.derived_by && e.evidence_event_ids.includes('failure')));
- });
-} else skip('deterministic link', 'replay fixture failed');
 await check('WebM fixture header', async () => {
- const media = await readFile(fixturePath('session.webm'));
+ const media = await readFile(goldenFile('session.webm'));
  assert.equal(media.subarray(0, 4).toString('hex'), '1a45dfa3');
+ assert.equal(media.length, 16047324);
 });
 const liveChecks = ['Supabase fixture', 'RLS insert denial', 'signed private media'];
 const reason = offline ? 'offline requested' : !process.env.SUPABASE_SECRET_KEY ? 'SUPABASE_SECRET_KEY absent' : undefined;

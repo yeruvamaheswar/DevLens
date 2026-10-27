@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises';
-import { fixturePath } from '../../../../../packages/core/fixture';
+import { goldenFile } from '../../../../../packages/core/server';
 export const runtime = 'nodejs';
 export async function GET(request: Request) {
- const file=await readFile(fixturePath('session.webm'));
+ const file=await readFile(goldenFile('session.webm'));
  const headers={'Content-Type':'video/webm','Accept-Ranges':'bytes','Cache-Control':'no-store'};
  const range=request.headers.get('range');
  if (!range) return new Response(new Uint8Array(file),{headers:{...headers,'Content-Length':String(file.length)}});

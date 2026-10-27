@@ -1,3 +1,11 @@
-import { loadReplay } from '../../../../packages/core/server';
+import { readFile } from 'node:fs/promises';
+import { goldenFile, loadReplay } from '../../../../packages/core/server';
+import { buildReplayView } from '../../replay/view';
+
 export const runtime = 'nodejs';
-export async function GET(request: Request) { return Response.json(await loadReplay(new URL(request.url).searchParams.get('offline') === '1'),{headers:{'Cache-Control':'no-store'}}); }
+
+export async function GET(request: Request) {
+  const replay = await loadReplay(new URL(request.url).searchParams.get('offline') === '1');
+  const patch = await readFile(goldenFile('git-diffs.patch'), 'utf8');
+  return Response.json(buildReplayView(replay, patch), { headers: { 'Cache-Control': 'no-store' } });
+}
