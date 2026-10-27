@@ -45,7 +45,7 @@ describe('golden replay view', () => {
       expect(question.event_ids.length).toBeGreaterThan(0);
       for (const id of question.event_ids) expect(ids.has(id)).toBe(true);
     }
-    expect(view.questions[0].text).toBe('The test failed. Did the next prompt mention the error?');
+    expect(view.questions[0].text).toBe('The test failed, and the next prompt did not mention the error. Was that deliberate?');
     expect(view.questions[0].event_ids).toContain(view.claim.failure.id);
     expect(view.questions[1].text).toContain('Was an agent edit kept with no test until the end?');
     expect(view.questions[1].event_ids).toContain(view.claim.pass.id);

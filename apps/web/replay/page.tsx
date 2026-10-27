@@ -147,7 +147,7 @@ export default function ReplayPage() {
           <EventBlock event={claim.rerun} heading="Sandbox result" />
         </section>
         <h3>Rules</h3>
-        <p>A rule edge comes from a fixed rule applied to recorded events. Observed means the rule read recorded events directly. Inferred means the rule guessed a link. Neither is a cause.</p>
+        <p>A rule edge comes from a fixed rule applied to recorded events. Observed means a separate sandbox re-run gave the same result. Inferred means no re-run confirmed it, so the link rests on event order. Neither is a cause.</p>
         <ul>
           {claim.rules.map((rule) => (
             <li key={rule.id}>

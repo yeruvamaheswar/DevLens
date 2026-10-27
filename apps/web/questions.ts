@@ -54,7 +54,7 @@ function omittedErrorQuestion(events: readonly Event[]): ReviewerQuestion | null
   return {
     id: 'q-next-prompt-omits-error',
     rule_id: 'rule-q1-next-prompt-omits-error-v1',
-    text: 'The test failed. Did the next prompt mention the error?',
+    text: 'The test failed, and the next prompt did not mention the error. Was that deliberate?',
     event_ids: [...ids, promptId],
   };
 }

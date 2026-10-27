@@ -34,7 +34,7 @@ describe('reviewer questions', () => {
       payload: { prompt: 'Run npm test' },
     });
     const question = reviewerQuestions([failure, prompt], []).find((item) => item.rule_id === 'rule-q1-next-prompt-omits-error-v1');
-    expect(question?.text).toBe('The test failed. Did the next prompt mention the error?');
+    expect(question?.text).toBe('The test failed, and the next prompt did not mention the error. Was that deliberate?');
     expect(question?.event_ids).toEqual(['f', 'p']);
   });
 

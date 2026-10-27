@@ -19,14 +19,14 @@ The golden take is a real session. The author recorded their own Claude Code run
 
 ## Quick start
 
-Requires Node 22 or later. Run from the repo root.
+Tested on Node 24. Node 22 or later should work but was not tested. Run from the repo root.
 
 ```
 npm install
 npm run demo -- --offline
 ```
 
-Open `http://localhost:3000/replay`. This mode needs no Supabase and no keys. The page label says `local fixture`.
+Open `http://localhost:3000/replay`. If port 3000 is busy, Next picks another port and prints it. A leftover `next dev` for this repo also blocks a second one: stop it first. This mode needs no Supabase and no keys. The page label says `local fixture`.
 
 To read from Supabase, run `npm run demo`. The label then says `supabase`. If the server keys are missing or a read fails, the page falls back to local files and shows a warning. `/replay?offline=1` forces local mode.
 
@@ -59,7 +59,7 @@ Only the Supabase project `hivfaqlabtbrhrviwrrm` is used. The `recordings` bucke
 Link a session to a recording (writes to Supabase, so it needs the server key; `--dry-run` only counts):
 
 ```
-npx tsx packages/cli/src/link.ts <events.jsonl> --recording <meta.json> --rerun <rerun.jsonl> [--dry-run]
+npx tsx packages/cli/src/link.ts <events.jsonl> [--recording <meta.json>] [--rerun <rerun.jsonl>] [--dry-run]
 ```
 
 ## Scenarios
@@ -75,6 +75,8 @@ Each starter has a failing test. Run `npm test` inside its directory.
 | `examples/wrong-page` | pagination asks for the wrong page |
 | `examples/bad-date` | date parsing gives the wrong day |
 | `examples/empty-list` | an empty result crashes |
+
+Re-run a test in the sandbox with `npx tsx packages/cli/src/rerun.ts --dir <path> --command <command> --rerun-of <event-id> --session <id> --project <id> --out <file>`. The `--unsafe-no-isolation` flag turns the sandbox off. Do not use it on code you did not write.
 
 To record your own take, follow [examples/broken-api/RECORDING.md](examples/broken-api/RECORDING.md).
 
@@ -100,7 +102,7 @@ Read these before trusting the demo.
 - The take has no recorded answer to a DevLens question. The page says so.
 - `GET /api/replay` has no authentication. Anyone who can reach the server can read the golden events and mint a 30-minute link to the private recording. Run it locally or share it only on purpose. The author consented to this take.
 - The link exposes one object, download only. `/api/replay/media` ignores any path in the request.
-- Rule edges show `observed` or `inferred`. Neither is a cause.
+- Rule edges show `observed` (a separate sandbox re-run gave the same result) or `inferred` (event order only). Neither is a cause.
 
 ### Sandbox re-run limits
 
