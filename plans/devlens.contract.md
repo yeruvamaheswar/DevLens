@@ -72,6 +72,8 @@ Repo: https://github.com/yeruvamaheswar/DevLens
 | REQ-16 | The screen recording of the chosen window is stored in Supabase Storage. Replay plays that file. | user |
 | NOT-5 | The judging-table demo must not depend on a live model call. | agent |
 | NOT-6 | The Supabase secret key must not be in a `NEXT_PUBLIC_` variable or in the browser bundle. | agent |
+| REQ-22 | The replay may show the coding agent's model and token usage, read from consented local data, labeled as context with the price-table date and billing route. It is never a ratio, rank, or comparison. | user |
+| REQ-23 | A developer answer is stored verbatim, linked to its question id, and labeled `live` or `post_session` with its real time. | user |
 
 ## Decisions
 | ID | Decision | By |
@@ -111,6 +113,8 @@ Repo: https://github.com/yeruvamaheswar/DevLens
 | EVAL-17 | REQ-17 | The repo contains at least seven scenario folders. `npm test` fails in each on its starter. | integration | not run |
 | EVAL-18 | REQ-18, REQ-2, NOT-2 | Desktop mode keeps a monitor take and labels it desktop. Window mode discards a monitor take. No camera track in either. | browser | not run |
 | EVAL-19 | REQ-19, REQ-21 | `npm run demo` does not require a virtual desktop. The README names that download as later. | human | not run |
+| EVAL-21 | REQ-22, NOT-1 | A unit test reproduces the golden usage totals. The page has no efficiency, score, or rank words. | unit | not run |
+| EVAL-22 | REQ-23 | An answer renders verbatim with its label. The no-answer line shows only when no answer exists. | unit | not run |
 | EVAL-20 | REQ-20, NOT-4, REQ-21 | The Thursday demo has no week strip, or any strip on screen is labeled "not in this build." | human | not run |
 
 ## Infrastructure
@@ -290,3 +294,4 @@ Each scenario keeps the same shape. The starter fails. A plausible first fix fai
 | CR-2 | 2026-10-26 | Database is Supabase Postgres. Screen recording is required and stored in Supabase Storage. The full desktop stays out. Offline fixture remains the table fallback. | DEC-3, DEC-5, REQ-8, REQ-11, REQ-15, REQ-16, NOT-6 | user |
 | CR-3 | 2026-10-26 | Add at least seven scenarios and opt-in desktop capture. Virtual desktop and the week-long project are later. Extra scope waits until the golden replay works. | REQ-17, REQ-18, REQ-19, REQ-20, REQ-21, NOT-2, NOT-3, DEC-10, DEC-11, DEC-12 | user |
 | CR-4 | 2026-10-26 | Clarify: `actor` also allows `unknown`, as `docs/implementation.md` already says. No requirement changes. | Architecture | pending user note |
+| CR-5 | 2026-10-27 | Thursday scope adds the usage-context panel and labeled post-session answers. Post-fair work is drafted in `plans/devlens-review-questions.md`, not approved. | REQ-22, REQ-23, EVAL-21, EVAL-22 | user chose A + H1a + H1b |

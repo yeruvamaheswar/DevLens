@@ -17,6 +17,7 @@
     "test:record": "vitest run apps/web/record",
     "test:link": "vitest run packages/link/tests/rules.test.ts",
     "test:rerun": "vitest run packages/link/tests/rerun.test.ts",
+    "usage:golden": "tsx packages/core/usage.ts",
     "test:replay": "vitest run apps/web/replay apps/web/questions.test.ts",
     "build": "next build apps/web"
   },

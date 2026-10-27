@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 import type { Event } from '../../packages/core/event';
-import { reviewerQuestions } from './questions';
+import { ANSWER_ABSENT, reviewerQuestions, unknownLines } from './questions';
 
 function ev(partial: Partial<Event> & Pick<Event, 'id' | 'type' | 'ts'>): Event {
   return {
@@ -75,5 +75,18 @@ describe('reviewer questions', () => {
   it('does not call a model', async () => {
     const source = await readFile('apps/web/questions.ts', 'utf8');
     expect(source).not.toMatch(/openai|anthropic|generateText/i);
+  });
+});
+
+describe('unknown lines', () => {
+  it('swaps the usage and answer lines only when that data exists', () => {
+    const none = unknownLines([], [], []);
+    expect(none).toContain('Model and token data were not read for this take.');
+    expect(none).toContain(ANSWER_ABSENT);
+    const both = unknownLines([], [], [], { usage: true, answers: true });
+    expect(both).toContain('Coding-agent usage is shown as context. It is not a measure of skill or efficiency.');
+    expect(both).not.toContain('Model and token data were not read for this take.');
+    expect(both).not.toContain(ANSWER_ABSENT);
+    expect(both).toContain('Developer answers were written after the session, not during the take.');
   });
 });

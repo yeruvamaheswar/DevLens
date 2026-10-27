@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 import { goldenFile, localGoldenReplay } from '../../../packages/core/server';
 import { ANSWER_ABSENT } from '../questions';
+import { loadUsage } from '../../../packages/core/usage';
 import { COMMIT_DIFF_LABEL, buildReplayView } from './view';
 
 describe('golden replay view', () => {
@@ -58,5 +59,53 @@ describe('golden replay view', () => {
     expect(packed).not.toMatch(/\b(score|rank|hire)\b/i);
     expect(packed).not.toContain('/Users/');
     expect(packed).not.toContain('SUPABASE_SECRET_KEY');
+  });
+});
+
+describe('usage and post-session answers', () => {
+  const answers = [
+    { question_id: 'q-next-prompt-omits-error', text: 'nope', answered_at: '2026-10-27T20:47:48Z', delivery: 'post_session', actor: 'developer' },
+    { question_id: 'q-edit-untested-until-end', text: 'not sure.', answered_at: '2026-10-27T20:47:48Z', delivery: 'post_session', actor: 'developer' },
+  ] as const;
+
+  async function build(extras?: Parameters<typeof buildReplayView>[2]) {
+    return buildReplayView(await localGoldenReplay(), await readFile(goldenFile('git-diffs.patch'), 'utf8'), extras);
+  }
+
+  it('renders answers verbatim with the label and marks a question with no answer', async () => {
+    const view = await build({ answers });
+    expect(view.questions[0].answer).toEqual({ text: 'nope', label: 'Developer answer, written after the session on 2026-10-27. Not captured during the take.' });
+    expect(view.questions[1].answer?.text).toBe('not sure.');
+    expect(view.questions[2].answer).toBeNull();
+    expect(view.answers_present).toBe(true);
+  });
+
+  it('shows the no-answer line only when no answer exists', async () => {
+    const without = await build();
+    expect(without.unknowns).toContain(ANSWER_ABSENT);
+    expect(without.questions.every((q) => q.answer === null)).toBe(true);
+    const withAnswers = await build({ answers });
+    expect(withAnswers.unknowns).not.toContain(ANSWER_ABSENT);
+    expect(withAnswers.unknowns).toContain('Developer answers were written after the session, not during the take.');
+    expect(withAnswers.claim.answer_note).toBe('Developer answers were written after the session, not during the take.');
+  });
+
+  it('swaps the usage unknowns line and builds the panel data from the golden file', async () => {
+    const usage = await loadUsage(goldenFile('usage.jsonl'));
+    const view = await build({ usage });
+    expect(view.unknowns).not.toContain('Model and token data were not read for this take.');
+    expect(view.unknowns).toContain('Coding-agent usage is shown as context. It is not a measure of skill or efficiency.');
+    expect(view.usage).toMatchObject({ requests: 11, models: ['claude-sonnet-5-5'], input_tokens: 22, output_tokens: 2434, cache_write_1h: 82753, cache_write_5m: 0, cache_read: 664323, price_table: 'claude-pricing-2026-10-27', price_table_date: '2026-10-27', billing_route_label: 'plan (assumed)', note: "Billed to the developer's plan, not charged per token. Not comparable to other sessions." });
+    const old = await build();
+    expect(old.usage).toBeNull();
+    expect(old.unknowns).toContain('Model and token data were not read for this take.');
+  });
+
+  it('keeps verdict words out of the view text', async () => {
+    const usage = await loadUsage(goldenFile('usage.jsonl'));
+    const view = await build({ usage, answers });
+    const text = JSON.stringify({ usage: view.usage, unknowns: view.unknowns, q: view.questions.map((q) => [q.text, q.answer]) });
+    const stripped = text.replace('It is not a measure of skill or efficiency.', '');
+    expect(stripped).not.toMatch(/efficient|score|rank|better|worse|hire/i);
   });
 });

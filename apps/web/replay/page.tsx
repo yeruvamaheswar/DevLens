@@ -161,6 +161,12 @@ export default function ReplayPage() {
         {data.questions.map((question) => (
           <li key={question.id}>
             <p>{question.text}</p>
+            {data.answers_present ? (
+              <>
+                {question.answer ? <p>{question.answer.label}</p> : null}
+                <blockquote style={{ whiteSpace: 'pre-wrap' }}>{question.answer ? question.answer.text : 'Not answered.'}</blockquote>
+              </>
+            ) : null}
             <p>Origin: rule derived, {question.rule_id}. No model call.</p>
             <ul>
               {question.event_ids.map((id) => {
@@ -171,6 +177,30 @@ export default function ReplayPage() {
           </li>
         ))}
       </ol>
+      {data.usage ? (
+        <section aria-label="Coding-agent usage (context)">
+          <h2>Coding-agent usage (context)</h2>
+          <table>
+            <thead>
+              <tr><th>Requests</th><th>Model</th><th>Input tokens</th><th>Output tokens</th><th>Cache write 1h</th><th>Cache write 5m</th><th>Cache read</th><th>List-price equivalent (USD)</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>{data.usage.requests}</td>
+                <td>{data.usage.models.join(', ')}</td>
+                <td>{data.usage.input_tokens.toLocaleString('en-US')}</td>
+                <td>{data.usage.output_tokens.toLocaleString('en-US')}</td>
+                <td>{data.usage.cache_write_1h.toLocaleString('en-US')}</td>
+                <td>{data.usage.cache_write_5m.toLocaleString('en-US')}</td>
+                <td>{data.usage.cache_read.toLocaleString('en-US')}</td>
+                <td>${data.usage.list_price_usd.toFixed(4)}</td>
+              </tr>
+            </tbody>
+          </table>
+          <p>Billing route: {data.usage.billing_route_label}. Price table: {data.usage.price_table} ({data.usage.price_table_date}).</p>
+          <p>{data.usage.note}</p>
+        </section>
+      ) : null}
       <h2>Unknowns</h2>
       <ul>{data.unknowns.map((line) => <li key={line}>{line}</li>)}</ul>
       <h2>Not captured</h2>

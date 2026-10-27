@@ -1,5 +1,6 @@
-import type { Edge, Event, Replay } from '../../../packages/core/event';
-import { ANSWER_ABSENT, NOT_CAPTURED, reviewerQuestions, unknownLines, type ReviewerQuestion } from '../questions';
+import type { Edge, Event, PostSessionAnswer, Replay, UsageRecord } from '../../../packages/core/event';
+import { ANSWERS_POST_SESSION, ANSWER_ABSENT, NOT_CAPTURED, reviewerQuestions, unknownLines, type ReviewerQuestion } from '../questions';
+import { PRICE_TABLE_DATE, sumUsage, type UsageTotals } from '../../../packages/core/usage';
 import { parseCommitDiffs, type CommitDiff } from './commits';
 
 export const COMMIT_DIFF_LABEL = 'commit diff, from git, not from the hook log';
@@ -46,9 +47,18 @@ export type Claim = {
   origins: { model: string; rule: string; worker: string };
 };
 
+export type UsageView = UsageTotals & { price_table: string; price_table_date: string; billing_route: string; billing_route_label: string; note: string };
+export type ViewQuestion = ReviewerQuestion & { answer: { text: string; label: string } | null };
+
+export function answerLabel(answer: Pick<PostSessionAnswer, 'answered_at'>): string {
+  return `Developer answer, written after the session on ${answer.answered_at.slice(0, 10)}. Not captured during the take.`;
+}
+
 export type ReplayView = Replay & {
   claim: Claim;
-  questions: ReviewerQuestion[];
+  questions: ViewQuestion[];
+  usage: UsageView | null;
+  answers_present: boolean;
   unknowns: string[];
   not_captured: string[];
 };
@@ -184,15 +194,32 @@ function buildClaim(events: readonly Event[], edges: readonly Edge[], commits: r
   };
 }
 
-export function buildReplayView(replay: Replay, patch: string): ReplayView {
+export function buildReplayView(replay: Replay, patch: string, extras: { usage?: readonly UsageRecord[]; answers?: readonly PostSessionAnswer[] } = {}): ReplayView {
   const events = [...replay.events].sort(byTime);
   const commits = parseCommitDiffs(patch);
+  const usage = extras.usage ?? [];
+  const answers = extras.answers ?? [];
+  const claim = buildClaim(events, replay.edges, commits);
+  if (answers.length > 0 && claim.answer_note === ANSWER_ABSENT) claim.answer_note = ANSWERS_POST_SESSION;
+  const totals = usage.length > 0 ? sumUsage(usage) : null;
   return {
     ...replay,
     events: events.map(stripEvent),
-    claim: buildClaim(events, replay.edges, commits),
-    questions: reviewerQuestions(events, commits),
-    unknowns: unknownLines(events, replay.edges, commits),
+    claim,
+    questions: reviewerQuestions(events, commits).map((question) => {
+      const found = answers.find((answer) => answer.question_id === question.id);
+      return { ...question, answer: found ? { text: found.text, label: answerLabel(found) } : null };
+    }),
+    usage: totals && {
+      ...totals,
+      price_table: usage[0].price_table,
+      price_table_date: PRICE_TABLE_DATE,
+      billing_route: usage[0].billing_route,
+      billing_route_label: 'plan (assumed)',
+      note: "Billed to the developer's plan, not charged per token. Not comparable to other sessions.",
+    },
+    answers_present: answers.length > 0,
+    unknowns: unknownLines(events, replay.edges, commits, { usage: usage.length > 0, answers: answers.length > 0 }),
     not_captured: [...NOT_CAPTURED],
   };
 }

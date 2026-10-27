@@ -1,6 +1,8 @@
 import type { Edge, Event } from '../../packages/core/event';
 
 export const ANSWER_ABSENT = 'No developer answer was captured in this take.';
+export const ANSWERS_POST_SESSION = 'Developer answers were written after the session, not during the take.';
+export const USAGE_CONTEXT = 'Coding-agent usage is shown as context. It is not a measure of skill or efficiency.';
 export const NOT_CAPTURED = ['reasoning', 'the editor', 'other terminals', 'camera', 'microphone'] as const;
 
 export type ReviewerQuestion = {
@@ -116,7 +118,7 @@ export function reviewerQuestions(events: readonly Event[], commits: readonly { 
   return questions.slice(0, 5);
 }
 
-export function unknownLines(events: readonly Event[], edges: readonly Edge[], commits: readonly { name: string }[]): string[] {
+export function unknownLines(events: readonly Event[], edges: readonly Edge[], commits: readonly { name: string }[], has: { usage?: boolean; answers?: boolean } = {}): string[] {
   const unattributed = events.filter((event) => event.type === 'file_edit' && event.actor === 'unknown' && event.payload.attribution === 'unattributed');
   const commitNames = commits.map((commit) => commit.name).filter((name) => name !== 'starter');
   const inferred = edges.filter((edge) => edge.provenance === 'inferred');
@@ -136,9 +138,9 @@ export function unknownLines(events: readonly Event[], edges: readonly Edge[], c
     unattributedLine,
     inferredLine,
     'A passing test may not be a meaningful test.',
-    'Model and token data were not read for this take.',
+    has.usage ? USAGE_CONTEXT : 'Model and token data were not read for this take.',
     'Nothing here predicts job performance.',
     footageLine,
-    ANSWER_ABSENT,
+    has.answers ? ANSWERS_POST_SESSION : ANSWER_ABSENT,
   ];
 }

@@ -14,7 +14,10 @@ describe('replay page source', () => {
     expect(page).toContain('aria-label="Recording of the Claude Code terminal"');
     expect(page).toContain('by session order, which is an inference');
     expect(page).toContain("get('offline') === '1'");
-    expect(page).not.toMatch(/\b(score|rank|hire)\b/i);
+    expect(page).toContain('Coding-agent usage (context)');
+    expect(page).toContain('Not answered.');
+    expect(page).toContain('question.answer.text');
+    expect(page).not.toMatch(/\b(efficient|score|rank|better|worse|hire)\b/i);
     expect(page).not.toContain('SUPABASE_SECRET_KEY');
     expect(page).not.toMatch(/NEXT_PUBLIC_\w*SECRET/);
     expect(media).toContain('goldenFile');

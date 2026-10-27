@@ -41,3 +41,16 @@ export type RecordingMeta = {
 };
 export type RecordingMetaInput = Omit<RecordingMeta, 'recording_ref'>; // POST /api/recordings/<id>/meta body; the server adds recording_ref
 export type RecordingGrant = { recording_id: string; path: string; token: string }; // POST /api/recordings response
+
+// Coding-agent usage for one API request. Numbers and ids only. Context, never a measure.
+export type UsageRecord = {
+  session_id: string; request_id: string; model: string;
+  input_tokens: number; output_tokens: number;
+  cache_write_5m: number; cache_write_1h: number; cache_read: number;
+  list_price_usd: number; price_table: string; billing_route: 'plan';
+};
+// A developer answer written after the session. Stored verbatim.
+export type PostSessionAnswer = {
+  question_id: string; text: string; answered_at: string;
+  delivery: 'post_session'; actor: 'developer';
+};
