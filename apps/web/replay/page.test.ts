@@ -11,6 +11,9 @@ describe('replay page source', () => {
     expect(page).toContain('Separate from the session test line.');
     expect(page).toContain('This take did not capture:');
     expect(page).toContain('answer_note');
+    expect(page).toContain('aria-label="Recording of the Claude Code terminal"');
+    expect(page).toContain('by session order, which is an inference');
+    expect(page).toContain("get('offline') === '1'");
     expect(page).not.toMatch(/\b(score|rank|hire)\b/i);
     expect(page).not.toContain('SUPABASE_SECRET_KEY');
     expect(page).not.toMatch(/NEXT_PUBLIC_\w*SECRET/);

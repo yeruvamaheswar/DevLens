@@ -34,7 +34,7 @@ describe('reviewer questions', () => {
       payload: { prompt: 'Run npm test' },
     });
     const question = reviewerQuestions([failure, prompt], []).find((item) => item.rule_id === 'rule-q1-next-prompt-omits-error-v1');
-    expect(question?.text).toBe('The test failed and the next prompt did not mention the error.');
+    expect(question?.text).toBe('The test failed. Did the next prompt mention the error?');
     expect(question?.event_ids).toEqual(['f', 'p']);
   });
 
@@ -60,7 +60,7 @@ describe('reviewer questions', () => {
     const editB = ev({ id: 'b', type: 'file_edit', ts: '2026-10-27T00:00:02.000Z', payload: { files: ['src/client.js'] } });
     const pass = ev({ id: 'pass', type: 'test', ts: '2026-10-27T00:00:03.000Z', payload: { status: 'passed', output: 'ok' } });
     const question = reviewerQuestions([editA, editB, pass], []).find((item) => item.rule_id === 'rule-q2-edit-untested-until-end-v1');
-    expect(question?.text).toBe('An agent edit was kept with no test until the end.');
+    expect(question?.text).toContain('Was an agent edit kept with no test until the end?');
     expect(question?.event_ids).toEqual(['a', 'b', 'pass']);
   });
 
@@ -68,9 +68,8 @@ describe('reviewer questions', () => {
     const edit = ev({ id: 'e', type: 'file_edit', ts: '2026-10-27T00:00:01.000Z', payload: { files: ['src/client.js'] } });
     const question = reviewerQuestions([edit], [{ name: 'starter' }, { name: 'final-fix' }]).find((item) => item.rule_id === 'rule-q3-unhooked-commit-v1');
     expect(question?.event_ids).toEqual(['e']);
-    expect(question?.text).toContain('A file changed with no hooked event.');
-    expect(question?.text).toContain('final-fix');
-    expect(question?.text).toContain('unattributed');
+    expect(question?.text).toContain('Who made the final-fix commit?');
+    expect(question?.text).toContain('no hooked event does');
   });
 
   it('does not call a model', async () => {

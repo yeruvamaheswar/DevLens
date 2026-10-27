@@ -39,7 +39,7 @@ export default function ReplayPage() {
   const pending = useRef<number | null>(null);
 
   useEffect(() => {
-    const offline = new URLSearchParams(location.search).has('offline');
+    const offline = new URLSearchParams(location.search).get('offline') === '1';
     fetch(`/api/replay${offline ? '?offline=1' : ''}`)
       .then((response) => {
         if (!response.ok) throw new Error('unavailable');
@@ -84,6 +84,7 @@ export default function ReplayPage() {
         ref={video}
         src={data.media.url}
         controls
+        aria-label="Recording of the Claude Code terminal"
         preload="metadata"
         playsInline
         width={2462}
@@ -99,6 +100,7 @@ export default function ReplayPage() {
         onError={() => setError('Media unavailable. Reload to refresh the short-lived URL.')}
       />
       <p>{frameNote}</p>
+      <p>Claude Code collapses tool output on screen. At a seek point the failing or passing output may not be visible. The log text below is the evidence.</p>
       <p role="status">{error || seekNote}</p>
       <h2>Failure to pass</h2>
       <p>
@@ -133,7 +135,7 @@ export default function ReplayPage() {
         {claim.diffs.map((diff) => (
           <figure key={diff.name}>
             <figcaption>
-              {diff.name}. commit diff, from git, not from the hook log. Event ids: {diff.event_ids.join(', ')}.
+              {diff.name}. commit diff, from git, not from the hook log. Paired with these hooked edits by session order, which is an inference: {diff.event_ids.join(', ')}.
             </figcaption>
             {diff.hook_redacted ? <p>The hook log stored an edit line as [REDACTED]. That marker is not a secret.</p> : null}
             <pre style={{ whiteSpace: 'pre-wrap', background: '#f4f4f4', padding: 12, overflow: 'auto', maxHeight: 280 }}>{diff.patch}</pre>
@@ -145,6 +147,7 @@ export default function ReplayPage() {
           <EventBlock event={claim.rerun} heading="Sandbox result" />
         </section>
         <h3>Rules</h3>
+        <p>A rule edge comes from a fixed rule applied to recorded events. Observed means the rule read recorded events directly. Inferred means the rule guessed a link. Neither is a cause.</p>
         <ul>
           {claim.rules.map((rule) => (
             <li key={rule.id}>

@@ -54,7 +54,7 @@ function omittedErrorQuestion(events: readonly Event[]): ReviewerQuestion | null
   return {
     id: 'q-next-prompt-omits-error',
     rule_id: 'rule-q1-next-prompt-omits-error-v1',
-    text: 'The test failed and the next prompt did not mention the error.',
+    text: 'The test failed. Did the next prompt mention the error?',
     event_ids: [...ids, promptId],
   };
 }
@@ -87,7 +87,7 @@ function untestedEditQuestion(events: readonly Event[]): ReviewerQuestion | null
   return {
     id: 'q-edit-untested-until-end',
     rule_id: 'rule-q2-edit-untested-until-end-v1',
-    text: 'An agent edit was kept with no test until the end.',
+    text: 'Was an agent edit kept with no test until the end? The cited events show the edits and the last test.',
     event_ids: ids,
   };
 }
@@ -99,7 +99,7 @@ function unhookedCommitQuestion(events: readonly Event[], commits: readonly { na
   return {
     id: 'q-unhooked-commit',
     rule_id: 'rule-q3-unhooked-commit-v1',
-    text: `A file changed with no hooked event. Call it unattributed and ask who changed it. The ${joinNames(names)} commits have no hooked event. Cited ids are the hooked edits those commits record.`,
+    text: `Who made the ${joinNames(names)} ${names.length === 1 ? 'commit' : 'commits'}? Git shows ${names.length === 1 ? 'it' : 'them'}, but no hooked event does. The cited ids are the hooked edits in the sessions, not the commits.`,
     event_ids: edits.map((event) => event.id),
   };
 }

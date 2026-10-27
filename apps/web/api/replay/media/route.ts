@@ -2,7 +2,8 @@ import { readFile } from 'node:fs/promises';
 import { goldenFile } from '../../../../../packages/core/server';
 export const runtime = 'nodejs';
 export async function GET(request: Request) {
- const file=await readFile(goldenFile('session.webm'));
+ let file: Buffer;
+ try { file=await readFile(goldenFile('session.webm')); } catch { return new Response('Recording unavailable.',{status:404}); }
  const headers={'Content-Type':'video/webm','Accept-Ranges':'bytes','Cache-Control':'no-store'};
  const range=request.headers.get('range');
  if (!range) return new Response(new Uint8Array(file),{headers:{...headers,'Content-Length':String(file.length)}});
