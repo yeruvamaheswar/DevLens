@@ -12,7 +12,7 @@ export function Recorder({ session }: { session: RecorderSession }) {
   return (
     <main style={{ maxWidth: 720, margin: '48px auto', padding: 24, fontFamily: 'system-ui', lineHeight: 1.5 }}>
       <h1>Record</h1>
-      <p>Nothing is recorded until you click Start recording. Choose Record one window, or Record my desktop (second opt-in).</p>
+      <p>Nothing is recorded until you click Record one window or Record my desktop (second opt-in).</p>
       <section aria-label="Consent">
         <h2>Captured</h2>
         <ul>
@@ -25,7 +25,7 @@ export function Recorder({ session }: { session: RecorderSession }) {
         <ul>
           <li>Camera</li>
           <li>Microphone</li>
-          <li>The whole desktop</li>
+          <li>The whole desktop, unless you choose Record my desktop (second opt-in)</li>
           <li>A score</li>
         </ul>
       </section>

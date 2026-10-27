@@ -61,7 +61,7 @@ const DISPLAY_CONSTRAINTS = { video: true, audio: false } as const;
 
 export function createRecorderSession(deps: RecorderDeps): RecorderSession {
   let phase: RecorderPhase = 'idle';
-  let message = 'Nothing is recorded until you click Start recording. Choose Record one window, or Record my desktop (second opt-in).';
+  let message = 'Nothing is recorded until you click Record one window or Record my desktop (second opt-in).';
   let take: TakeState = idleTake();
   let objectUrl: string | null = null;
   let blob: Blob | null = null;
