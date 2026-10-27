@@ -60,7 +60,8 @@ describe('recording gates', () => {
     expect((await postGrant(cross, deps)).status).toBe(403);
     expect((await postGrant(request('/api/recordings', { mode: 'window', consent: false }), deps)).status).toBe(400);
     expect((await postGrant(request('/api/recordings', { mode: 'window' }), deps)).status).toBe(400);
-    expect((await postGrant(request('/api/recordings', { mode: 'desktop', consent: true }), deps)).status).toBe(400);
+    expect((await postGrant(request('/api/recordings', { mode: 'screen', consent: true }), deps)).status).toBe(400);
+    expect((await postGrant(request('/api/recordings', { mode: 'desktop', consent: false }), deps)).status).toBe(400);
     expect(calls).toEqual([]);
   });
 
@@ -75,6 +76,38 @@ describe('recording gates', () => {
     expect(await response.json()).toEqual({ recording_id: ID, path: `${ID}/take.webm`, token: 'signed-token' });
     expect(port.uploads).toEqual([`${ID}/take.webm`]);
     expect(port.metas).toEqual([]);
+  });
+
+  it('grants a consented desktop take and stores a monitor as desktop', async () => {
+    const port = storage();
+    const deps = { enabledFlag: '1', openStorage: () => port, newId: () => ID };
+    const grant = await postGrant(request('/api/recordings', { mode: 'desktop', consent: true }), deps);
+    expect(grant.status).toBe(200);
+    const desktopMeta = { ...validMeta, mode: 'desktop', display_surface: 'monitor' };
+    const stored = await postMeta(request(`/api/recordings/${ID}/meta`, desktopMeta), deps);
+    expect(stored.status).toBe(200);
+    const written = JSON.parse(port.metas[0].split('\n')[1]) as { mode: string; display_surface: string; audio_tracks: number; video_tracks: number };
+    expect(written).toMatchObject({ mode: 'desktop', display_surface: 'monitor', audio_tracks: 0, video_tracks: 1 });
+
+    const reported = await postMeta(request(`/api/recordings/${ID}/meta`, {
+      ...validMeta,
+      mode: 'desktop',
+      display_surface: 'window',
+    }), { enabledFlag: '1', openStorage: () => port });
+    expect(reported.status).toBe(200);
+    const reportedBody = JSON.parse(port.metas[1].split('\n')[1]) as { mode: string; display_surface: string };
+    expect(reportedBody).toMatchObject({ mode: 'desktop', display_surface: 'window' });
+
+    const windowMode = await postMeta(request(`/api/recordings/${ID}/meta`, validMeta), deps);
+    expect(windowMode.status).toBe(200);
+    const windowBody = JSON.parse(port.metas[2].split('\n')[1]) as { mode: string; display_surface: string };
+    expect(windowBody).toMatchObject({ mode: 'window', display_surface: 'window' });
+    expect(windowBody.mode).not.toBe('desktop');
+
+    expect((await postMeta(request(`/api/recordings/${ID}/meta`, { ...validMeta, mode: 'desktop', display_surface: 'monitor', consent: false }), deps)).status).toBe(400);
+    expect((await postMeta(request(`/api/recordings/${ID}/meta`, { ...validMeta, mode: 'desktop', display_surface: 'monitor', audio_tracks: 1 }), deps)).status).toBe(400);
+    expect((await postMeta(request(`/api/recordings/${ID}/meta`, { ...validMeta, mode: 'window', display_surface: 'monitor' }), deps)).status).toBe(400);
+    expect((await postMeta(request(`/api/recordings/${ID}/meta`, { ...validMeta, mode: 'desktop', display_surface: 'screen' }), deps)).status).toBe(400);
   });
 
   it('validates metadata and writes meta.json without a database write', async () => {

@@ -1,10 +1,11 @@
 import type { PauseSpan, RecordingMetaInput } from '../../../packages/core/event';
-import type { DisplaySurface } from './tracks';
+import type { CaptureMode, DisplaySurface } from './tracks';
 
 export type TakePhase = 'idle' | 'recording' | 'paused' | 'review';
 
 export type TakeState = {
   phase: TakePhase;
+  mode: CaptureMode;
   wallStartMs: number | null;
   wallEndMs: number | null;
   pauses: PauseSpan[];
@@ -13,12 +14,33 @@ export type TakeState = {
 };
 
 export function idleTake(): TakeState {
-  return { phase: 'idle', wallStartMs: null, wallEndMs: null, pauses: [], openPauseMs: null, displaySurface: null };
+  return {
+    phase: 'idle',
+    mode: 'window',
+    wallStartMs: null,
+    wallEndMs: null,
+    pauses: [],
+    openPauseMs: null,
+    displaySurface: null,
+  };
 }
 
-export function startTake(state: TakeState, now: number, displaySurface: DisplaySurface): TakeState {
+export function startTake(
+  state: TakeState,
+  now: number,
+  displaySurface: DisplaySurface,
+  mode: CaptureMode = 'window',
+): TakeState {
   if (state.phase !== 'idle') return state;
-  return { phase: 'recording', wallStartMs: now, wallEndMs: null, pauses: [], openPauseMs: null, displaySurface };
+  return {
+    phase: 'recording',
+    mode,
+    wallStartMs: now,
+    wallEndMs: null,
+    pauses: [],
+    openPauseMs: null,
+    displaySurface,
+  };
 }
 
 export function pauseTake(state: TakeState, now: number): TakeState {
@@ -46,7 +68,7 @@ export function metaFromTake(take: TakeState, bytes: number, recordingId: string
   if (take.phase !== 'review' || take.wallStartMs == null || take.wallEndMs == null || take.displaySurface == null) return null;
   return {
     recording_id: recordingId,
-    mode: 'window',
+    mode: take.mode,
     display_surface: take.displaySurface,
     consent: true,
     audio_tracks: 0,

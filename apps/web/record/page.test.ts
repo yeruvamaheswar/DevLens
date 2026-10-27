@@ -22,4 +22,28 @@ describe('record page source', () => {
     expect(page).not.toContain('SUPABASE_SECRET_KEY');
     expect(page).not.toMatch(/useEffect\([^)]*session\.start/);
   });
+
+  it('starts desktop only from its own click and shows the desktop consent and mode label', async () => {
+    const page = await readFile('apps/web/record/page.tsx', 'utf8');
+    expect(page).toContain('Record one window');
+    expect(page).toContain('Record my desktop (second opt-in)');
+    expect(page).toContain('onClick={() => { void session.start(); }}');
+    expect(page).toContain('onClick={() => { void session.startDesktop(); }}');
+    expect(page).toContain('A monitor take can show other windows and notifications.');
+    expect(page).toContain('Audio and camera stay off.');
+    expect(page).toContain('You can delete the take before upload.');
+    expect(page).toContain('Take mode: {snap.mode}.');
+    expect(page).toContain('Captured surface: {snap.displaySurface}.');
+    expect(page).toContain('This monitor take is labeled desktop.');
+    expect(page).toContain('saved display_surface');
+    expect(page).not.toContain('getUserMedia');
+    expect(page).not.toContain('audio: true');
+    expect(page).not.toContain('onKeyDown');
+    expect(page).not.toContain('keydown');
+    expect(page).not.toContain('keystroke');
+    const windowClick = page.indexOf('onClick={() => { void session.start(); }}');
+    const desktopClick = page.indexOf('onClick={() => { void session.startDesktop(); }}');
+    expect(windowClick).toBeGreaterThan(-1);
+    expect(desktopClick).toBeGreaterThan(windowClick);
+  });
 });

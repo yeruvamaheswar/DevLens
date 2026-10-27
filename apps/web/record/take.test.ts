@@ -44,4 +44,19 @@ describe('take clock', () => {
     });
     expect(meta).not.toHaveProperty('recording_ref');
   });
+
+  it('saves a desktop take as desktop and a window take as window', () => {
+    const desktop = metaFromTake(
+      stopTake(startTake(idleTake(), 1_000, 'monitor', 'desktop'), 2_000),
+      10,
+      '00000000-0000-4000-8000-000000000001',
+    );
+    expect(desktop).toMatchObject({ mode: 'desktop', display_surface: 'monitor', audio_tracks: 0, video_tracks: 1, consent: true });
+    const windowTake = metaFromTake(
+      stopTake(startTake(idleTake(), 1_000, 'window'), 2_000),
+      10,
+      '00000000-0000-4000-8000-000000000001',
+    );
+    expect(windowTake).toMatchObject({ mode: 'window', display_surface: 'window' });
+  });
 });

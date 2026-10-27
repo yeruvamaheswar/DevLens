@@ -1,6 +1,6 @@
 import type { PauseSpan } from '../../../packages/core/event';
 import { metaFromTake, pauseTake, resumeTake, startTake, stopTake, idleTake, type TakeState } from './take';
-import { assessTracks, discardMessage, type DisplaySurface, type TrackView } from './tracks';
+import { assessTracks, discardMessage, type CaptureMode, type DisplaySurface, type TrackView } from './tracks';
 
 export type CaptureTrack = TrackView & {
   stop: () => void;
@@ -40,11 +40,13 @@ export type RecorderSnapshot = {
   wallStartMs: number | null;
   wallEndMs: number | null;
   pauses: PauseSpan[];
+  mode: CaptureMode;
   displaySurface: DisplaySurface | null;
 };
 
 export type RecorderSession = {
   start: () => Promise<void>;
+  startDesktop: () => Promise<void>;
   pause: () => void;
   resume: () => void;
   stop: () => void;
@@ -59,7 +61,7 @@ const DISPLAY_CONSTRAINTS = { video: true, audio: false } as const;
 
 export function createRecorderSession(deps: RecorderDeps): RecorderSession {
   let phase: RecorderPhase = 'idle';
-  let message = 'Nothing is recorded until you click Start recording.';
+  let message = 'Nothing is recorded until you click Start recording. Choose Record one window, or Record my desktop (second opt-in).';
   let take: TakeState = idleTake();
   let objectUrl: string | null = null;
   let blob: Blob | null = null;
@@ -76,6 +78,7 @@ export function createRecorderSession(deps: RecorderDeps): RecorderSession {
       wallStartMs: take.wallStartMs,
       wallEndMs: take.wallEndMs,
       pauses: take.pauses.map((span) => ({ ...span })),
+      mode: take.mode,
       displaySurface: take.displaySurface,
     };
   }
@@ -103,6 +106,98 @@ export function createRecorderSession(deps: RecorderDeps): RecorderSession {
     emit();
   }
 
+  function recordingMessage(mode: CaptureMode): string {
+    if (mode === 'desktop') return 'Recording the desktop. Audio and camera stay off.';
+    return 'Recording the chosen window. Audio and camera stay off.';
+  }
+
+  function stopRecording() {
+    if (phase !== 'recording' && phase !== 'paused') return;
+    phase = 'review';
+    take = stopTake(take, deps.now());
+    message = 'Play the take or delete it. Upload is a separate step.';
+    const currentRecorder = recorder;
+    const currentStream = stream;
+    recorder = undefined;
+    if (currentRecorder && currentRecorder.state !== 'inactive') currentRecorder.stop();
+    stopTracks(currentStream);
+    stream = undefined;
+    emit();
+  }
+
+  async function arm(mode: CaptureMode) {
+    if (phase !== 'idle') return;
+    const current = ++generation;
+    phase = 'arming';
+    message = mode === 'desktop'
+      ? 'A monitor take can show other windows and notifications. Audio and camera stay off. You can delete the take before upload.'
+      : 'Choose one window. A full screen or a microphone share is discarded.';
+    emit();
+    let picked: CaptureStream;
+    try {
+      picked = await deps.getDisplayMedia(DISPLAY_CONSTRAINTS);
+    } catch {
+      if (current !== generation) return;
+      phase = 'idle';
+      message = 'Recording did not start.';
+      emit();
+      return;
+    }
+    if (current !== generation || phase !== 'arming') {
+      stopTracks(picked);
+      return;
+    }
+    const decision = assessTracks(picked.getTracks(), mode);
+    if (!decision.ok) {
+      stopTracks(picked);
+      phase = 'idle';
+      message = discardMessage(decision.reason);
+      emit();
+      return;
+    }
+    let created: CaptureRecorder;
+    try {
+      created = deps.createRecorder(picked);
+    } catch {
+      stopTracks(picked);
+      phase = 'idle';
+      message = 'Recording did not start.';
+      emit();
+      return;
+    }
+    const chunks: Blob[] = [];
+    created.addEventListener('dataavailable', (event) => {
+      if (event.data && event.data.size > 0) chunks.push(event.data);
+    });
+    created.addEventListener('stop', () => finishBlob(chunks));
+    const video = picked.getTracks().find((track) => track.kind === 'video');
+    video?.addEventListener('ended', () => {
+      if (generation === current) stopRecording();
+    });
+    const wallStartMs = deps.now();
+    take = startTake(idleTake(), wallStartMs, decision.displaySurface, mode);
+    stream = picked;
+    recorder = created;
+    phase = 'recording';
+    try {
+      created.start();
+    } catch {
+      if (phase === 'recording') {
+        recorder = undefined;
+        stream = undefined;
+        take = idleTake();
+        phase = 'idle';
+        stopTracks(picked);
+        message = 'Recording did not start.';
+        emit();
+      }
+      return;
+    }
+    if (phase !== 'recording') return;
+    message = recordingMessage(mode);
+    emit();
+  }
+
   return {
     snapshot,
     subscribe(next) {
@@ -113,74 +208,10 @@ export function createRecorderSession(deps: RecorderDeps): RecorderSession {
       };
     },
     async start() {
-      if (phase !== 'idle') return;
-      const current = ++generation;
-      phase = 'arming';
-      message = 'Choose one window. A full screen or a microphone share is discarded.';
-      emit();
-      let picked: CaptureStream;
-      try {
-        picked = await deps.getDisplayMedia(DISPLAY_CONSTRAINTS);
-      } catch {
-        if (current !== generation) return;
-        phase = 'idle';
-        message = 'Recording did not start.';
-        emit();
-        return;
-      }
-      if (current !== generation || phase !== 'arming') {
-        stopTracks(picked);
-        return;
-      }
-      const decision = assessTracks(picked.getTracks(), 'window');
-      if (!decision.ok) {
-        stopTracks(picked);
-        phase = 'idle';
-        message = discardMessage(decision.reason);
-        emit();
-        return;
-      }
-      let created: CaptureRecorder;
-      try {
-        created = deps.createRecorder(picked);
-      } catch {
-        stopTracks(picked);
-        phase = 'idle';
-        message = 'Recording did not start.';
-        emit();
-        return;
-      }
-      const chunks: Blob[] = [];
-      created.addEventListener('dataavailable', (event) => {
-        if (event.data && event.data.size > 0) chunks.push(event.data);
-      });
-      created.addEventListener('stop', () => finishBlob(chunks));
-      const video = picked.getTracks().find((track) => track.kind === 'video');
-      video?.addEventListener('ended', () => {
-        if (generation === current) this.stop();
-      });
-      const wallStartMs = deps.now();
-      take = startTake(idleTake(), wallStartMs, decision.displaySurface);
-      stream = picked;
-      recorder = created;
-      phase = 'recording';
-      try {
-        created.start();
-      } catch {
-        if (phase === 'recording') {
-          recorder = undefined;
-          stream = undefined;
-          take = idleTake();
-          phase = 'idle';
-          stopTracks(picked);
-          message = 'Recording did not start.';
-          emit();
-        }
-        return;
-      }
-      if (phase !== 'recording') return;
-      message = 'Recording the chosen window. Audio and camera stay off.';
-      emit();
+      await arm('window');
+    },
+    async startDesktop() {
+      await arm('desktop');
     },
     pause() {
       if (phase !== 'recording' || !recorder) return;
@@ -195,21 +226,11 @@ export function createRecorderSession(deps: RecorderDeps): RecorderSession {
       recorder.resume();
       take = resumeTake(take, deps.now());
       phase = 'recording';
-      message = 'Recording the chosen window. Audio and camera stay off.';
+      message = recordingMessage(take.mode);
       emit();
     },
     stop() {
-      if (phase !== 'recording' && phase !== 'paused') return;
-      phase = 'review';
-      take = stopTake(take, deps.now());
-      message = 'Play the take or delete it. Upload is a separate step.';
-      const currentRecorder = recorder;
-      const currentStream = stream;
-      recorder = undefined;
-      if (currentRecorder && currentRecorder.state !== 'inactive') currentRecorder.stop();
-      stopTracks(currentStream);
-      stream = undefined;
-      emit();
+      stopRecording();
     },
     deleteTake() {
       if (phase !== 'review') return;
@@ -238,7 +259,7 @@ export function createRecorderSession(deps: RecorderDeps): RecorderSession {
     },
     dispose() {
       generation += 1;
-      if (phase === 'recording' || phase === 'paused') this.stop();
+      if (phase === 'recording' || phase === 'paused') stopRecording();
       dropPreview();
       listener = null;
     },

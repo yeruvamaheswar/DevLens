@@ -212,4 +212,65 @@ describe('recorder session', () => {
     expect(late.stopped).toBe(true);
     expect(created).toBe(0);
   });
+
+  it('does not enter desktop mode from the window start', async () => {
+    const monitor = track('video', { displaySurface: 'monitor' });
+    const { session } = harness({ tracks: [monitor], now: () => 1 });
+    await (session.start as (mode?: string) => Promise<void>)('desktop');
+    expect(session.snapshot().phase).toBe('idle');
+    expect(session.snapshot().mode).toBe('window');
+    expect(session.snapshot().message).toContain('whole screen');
+    expect(monitor.stopped).toBe(true);
+  });
+
+  it('keeps a monitor from the desktop start and labels the take desktop', async () => {
+    const monitor = track('video', { displaySurface: 'monitor' });
+    const { session, calls, created } = harness({ tracks: [monitor], now: () => 1 });
+    const pending = session.startDesktop();
+    expect(session.snapshot().message).toContain('other windows and notifications');
+    expect(session.snapshot().message).toContain('Audio and camera stay off');
+    expect(session.snapshot().message).toContain('delete the take before upload');
+    await pending;
+    expect(calls).toEqual([{ video: true, audio: false }]);
+    expect(created()).toBe(1);
+    expect(monitor.stopped).toBe(false);
+    expect(session.snapshot().mode).toBe('desktop');
+    expect(session.snapshot().displaySurface).toBe('monitor');
+    session.stop();
+    expect(session.snapshot().phase).toBe('review');
+    expect(session.snapshot().mode).toBe('desktop');
+    expect(session.snapshot().displaySurface).toBe('monitor');
+  });
+
+  it('keeps a window chosen during desktop mode and records that surface', async () => {
+    const { session, calls } = harness({
+      tracks: [track('video', { displaySurface: 'window' })],
+      now: () => 1,
+    });
+    await session.startDesktop();
+    expect(calls).toEqual([{ video: true, audio: false }]);
+    expect(session.snapshot().phase).toBe('recording');
+    expect(session.snapshot().mode).toBe('desktop');
+    expect(session.snapshot().displaySurface).toBe('window');
+    session.stop();
+    expect(session.snapshot().mode).toBe('desktop');
+    expect(session.snapshot().displaySurface).toBe('window');
+  });
+
+  it('discards audio and a camera track in desktop mode', async () => {
+    const cases = [
+      { tracks: [track('video', { displaySurface: 'monitor' }), track('audio', {})], message: 'microphone' },
+      { tracks: [track('video', { displaySurface: 'monitor', facingMode: 'user' })], message: 'camera' },
+    ];
+    for (const item of cases) {
+      const { session, calls, created } = harness({ tracks: item.tracks, now: () => 1 });
+      await session.startDesktop();
+      expect(calls).toEqual([{ video: true, audio: false }]);
+      expect(item.tracks.every((entry) => entry.stopped)).toBe(true);
+      expect(created()).toBe(0);
+      expect(session.snapshot().phase).toBe('idle');
+      expect(session.snapshot().mode).toBe('window');
+      expect(session.snapshot().message).toContain(item.message);
+    }
+  });
 });

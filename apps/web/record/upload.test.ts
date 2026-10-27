@@ -47,6 +47,35 @@ describe('uploadReviewedTake', () => {
     expect(called).toBe(false);
   });
 
+  it('asks for a desktop grant and posts the desktop label with the captured surface', async () => {
+    const seen: Array<{ url: string; body: string }> = [];
+    const take = stopTake(startTake(idleTake(), 1_000, 'monitor', 'desktop'), 2_000);
+    await uploadReviewedTake({
+      supabaseUrl: 'https://hivfaqlabtbrhrviwrrm.supabase.co',
+      publishableKey: 'publishable-test-key',
+      blob: new Blob(['webm']),
+      take,
+      fetchImpl: async (input, init) => {
+        seen.push({ url: String(input), body: String(init?.body ?? '') });
+        if (String(input) === '/api/recordings') {
+          return Response.json({ recording_id: ID, path: `${ID}/take.webm`, token: 'signed-token' });
+        }
+        return Response.json({ ok: true });
+      },
+      uploadToSignedUrl: async () => {},
+    });
+    expect(JSON.parse(seen[0].body)).toEqual({ mode: 'desktop', consent: true });
+    const meta = JSON.parse(seen[1].body) as Record<string, unknown>;
+    expect(meta).toMatchObject({
+      mode: 'desktop',
+      display_surface: 'monitor',
+      audio_tracks: 0,
+      video_tracks: 1,
+      consent: true,
+    });
+    expect(meta.recording_ref).toBeUndefined();
+  });
+
   it('keeps the service-role name out of the browser modules', async () => {
     const upload = await readFile('apps/web/record/upload.ts', 'utf8');
     const browser = await readFile('apps/web/record/browser.ts', 'utf8');

@@ -50,7 +50,7 @@ export async function uploadReviewedTake(input: {
   const grantResponse = await fetchImpl('/api/recordings', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ mode: 'window', consent: true }),
+    body: JSON.stringify({ mode: input.take.mode, consent: true }),
   });
   if (!grantResponse.ok) throw new Error('recording grant was refused');
   const grant: unknown = await grantResponse.json();

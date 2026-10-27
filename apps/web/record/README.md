@@ -1,6 +1,14 @@
-# Window recorder
+# Recorder
 
-The record page is `/record`. A page load does not call `getDisplayMedia`. The developer clicks **Start recording**, reviews the file, and only then clicks **Upload**.
+The record page is `/record`. A page load does not call `getDisplayMedia`. Window mode is the default. The developer clicks **Record one window** or **Record my desktop (second opt-in)**, reviews the file, and only then clicks **Upload**.
+
+## Modes
+
+**Record one window** asks for one window. The saved `mode` is `window`. If the browser reports `display_surface` `monitor`, that take is discarded and the page asks again.
+
+**Record my desktop (second opt-in)** is a second click. Window start cannot open it. The saved `mode` is `desktop`. A monitor take is kept. A monitor take can show other windows and notifications. If the browser reports a window, a browser tab, or an unknown surface instead of a monitor, the take is kept and `display_surface` records what was captured. Audio and camera stay off. The developer can delete the take before upload.
+
+Neither mode records the microphone, the camera, or keystroke timing. The review screen shows the take mode, `window` or `desktop`, and the captured surface.
 
 ## `DEVLENS_RECORD_ENABLED`
 
@@ -16,4 +24,4 @@ Next serves `apps/web` and does not load the repo-root `.env` by itself. The rec
 
 The browser upload uses `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`. The service-role key stays on the server. The only accepted Supabase host is `hivfaqlabtbrhrviwrrm.supabase.co`.
 
-Desktop capture is not in this slice. The stored `mode` field remains `window`.
+The server accepts `mode` `desktop` only with the same consent checks as window mode. `display_surface` must be the value the browser reported: `window`, `monitor`, `browser`, or `unknown`. A monitor is stored only when `mode` is `desktop`. A window-mode take stays `mode` `window`. A monitor take labeled `window` is refused.
