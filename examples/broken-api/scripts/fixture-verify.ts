@@ -208,7 +208,9 @@ function main(): void {
       if (outside.length > 0) problems.push(`${outside.length} event(s) fall outside the recording window in meta.json`);
       if (windowMs == null || windowMs <= 0) problems.push('meta.json has no usable recording window');
       if (meta.audio_tracks !== 0 || meta.video_tracks !== 1 || meta.consent !== true) problems.push('meta.json does not show consent, one video track, and no audio');
-      if (meta.bytes != null && meta.bytes !== statSync(webmPath).size) problems.push('session.webm size does not match meta.json bytes');
+      if (meta.bytes == null || meta.bytes !== statSync(webmPath).size) problems.push('session.webm size does not match meta.json bytes');
+      if (meta.mode !== 'window' || meta.display_surface !== 'window') problems.push('meta.json is not a window-mode take of one window');
+      if (typeof meta.recording_id !== 'string' || meta.recording_ref !== `${meta.recording_id}/take.webm`) problems.push('meta.json recording_ref does not match recording_id/take.webm');
     } catch {
       problems.push('meta.json is not valid JSON');
     }

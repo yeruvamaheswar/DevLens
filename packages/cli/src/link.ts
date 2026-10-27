@@ -49,10 +49,10 @@ export function parseLinkArgs(argv: readonly string[]): { fixture: boolean; dryR
     else if (arg === '--dry-run') dryRun = true;
     else if (arg === '--rerun') {
       rerun = args[++i];
-      if (!rerun) usage();
+      if (!rerun || rerun.startsWith('--')) usage();
     } else if (arg === '--recording') {
       recording = args[++i];
-      if (!recording) usage();
+      if (!recording || recording.startsWith('--')) usage();
     } else if (arg.startsWith('--')) usage();
     else if (!events) events = arg;
     else usage();
@@ -88,6 +88,14 @@ async function readRecordingMeta(file: string): Promise<RecordingMeta> {
   const validPauses = Array.isArray(meta?.pauses) && meta.pauses.every((p) => Number.isFinite(p?.pause_ms) && Number.isFinite(p?.resume_ms));
   if (!meta || typeof meta.recording_ref !== 'string' || !meta.recording_ref || !Number.isFinite(meta.wall_start_ms) || !validPauses) {
     throw new Error(`Recording metadata ${path.basename(file)} is missing recording_ref, wall_start_ms, or pauses`);
+  }
+  if (meta.consent !== true || meta.audio_tracks !== 0 || meta.video_tracks !== 1) {
+    throw new Error(`Recording metadata ${path.basename(file)} does not show consent, one video track, and no audio`);
+  }
+  const start = meta.wall_start_ms as number;
+  const end = meta.wall_end_ms;
+  if (end == null || !Number.isFinite(end) || end <= start) {
+    throw new Error(`Recording metadata ${path.basename(file)} has no closed recording window`);
   }
   return meta as RecordingMeta;
 }
