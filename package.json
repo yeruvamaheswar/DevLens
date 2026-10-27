@@ -19,6 +19,7 @@
     "test:rerun": "vitest run packages/link/tests/rerun.test.ts",
     "usage:golden": "tsx packages/core/usage.ts",
     "test:replay": "vitest run apps/web/replay apps/web/questions.test.ts",
+    "test:questions": "vitest run packages/questions",
     "build": "next build apps/web"
   },
   "dependencies": {
