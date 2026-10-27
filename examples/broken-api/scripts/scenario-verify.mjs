@@ -13,6 +13,16 @@ const starterFiles = ['package.json', 'README.md', 'src/client.js', 'tests/clien
 const baseUrlFailure = 'wrong base URL: expected /api, received /v0';
 const headerFailure = 'expected Authorization header';
 
+const allStarterScenarios = [
+  'broken-api',
+  'swapped-field',
+  'missing-auth',
+  'stale-cache',
+  'wrong-page',
+  'bad-date',
+  'empty-list',
+];
+
 function fail(state, detail) {
   console.log(`${state}: FAIL`);
   if (detail) console.log(detail.trimEnd());
@@ -45,6 +55,7 @@ function runNpmTest(cwd) {
         npm_config_fund: 'false',
         npm_config_audit: 'false',
         npm_config_update_notifier: 'false',
+        npm_config_offline: 'true',
       },
     });
     const chunks = [];
@@ -69,8 +80,57 @@ function applyPatch(dir, patchPath) {
   });
 }
 
+async function verifyAllStarters() {
+  let ok = true;
+  for (const name of allStarterScenarios) {
+    const root = await mkdtemp(path.join(tmpdir(), `devlens-${name}-`));
+    try {
+      assertOutsideRepo(root);
+      const scenarioSrc = path.join(repoRoot, 'examples', name);
+      await cp(scenarioSrc, root, { recursive: true });
+
+      let expectedSubstring;
+      if (name === 'broken-api') {
+        expectedSubstring = baseUrlFailure;
+      } else {
+        const scenarioJsonPath = path.join(root, 'scenario.json');
+        if (!existsSync(scenarioJsonPath)) {
+          console.log(`${name}: FAIL: missing scenario.json`);
+          ok = false;
+          continue;
+        }
+        const scenarioConfig = JSON.parse(await readFile(scenarioJsonPath, 'utf8'));
+        expectedSubstring = scenarioConfig.failure;
+      }
+
+      const run = await runNpmTest(root);
+      if (run.code === 0) {
+        console.log(`${name}: FAIL: test unexpectedly passed`);
+        ok = false;
+      } else if (!run.out.includes(expectedSubstring)) {
+        console.log(`${name}: FAIL: expected failure "${expectedSubstring}" not found in output`);
+        ok = false;
+      } else {
+        console.log(`${name}: PASS`);
+      }
+    } catch (err) {
+      console.log(`${name}: FAIL: ${err instanceof Error ? err.message : String(err)}`);
+      ok = false;
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+
+  if (!ok) process.exit(1);
+}
+
 async function main() {
   const scenario = process.argv[2];
+  if (scenario === '--all-starters') {
+    await verifyAllStarters();
+    return;
+  }
+
   if (scenario !== 'broken-api') {
     console.log('usage: FAIL');
     console.log('usage: npm run scenario:verify -- broken-api');
