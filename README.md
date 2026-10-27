@@ -54,7 +54,8 @@ Only the Supabase project `hivfaqlabtbrhrviwrrm` is used. The `recordings` bucke
 | `npm run fixture:verify -- broken-api` | Checks the golden take: a failed test then a passing test with the same command, events inside the recording window, consent, one video track, no audio |
 | `npm run scenario:verify -- --all-starters` | Checks that every starter fails with a real assertion in a temp copy |
 | `npm run test:replay`, `test:link`, `test:rerun`, `test:sync`, `test:record`, `test:capture` | Unit tests per area |
-| `npm run build && npm run check:bundle` | Builds the app and rejects the server key name in browser assets |
+| `npm run build && npm run check:bundle` | Builds the app and rejects the server key name in browser assets. `check:bundle` fails if any source file changed after the last build |
+| `npm run test:questions` | Review Questions C1 (post-hackathon, not in the app yet): technology catalog, manifest-diff detector, and question template. Rules only |
 
 Link a session to a recording (writes to Supabase, so it needs the server key; `--dry-run` only counts):
 
