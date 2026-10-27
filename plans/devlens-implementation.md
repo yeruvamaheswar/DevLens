@@ -10,7 +10,20 @@ Summary: Build one cited, consented replay first; expand only after its real fai
 Goal: Submit a working Antler Agents demo by 2026-10-29 17:00 America/Chicago, then decide the later product from evidence.
 Rules: contract first · parallel agents only for justified independent work · choose each model when dispatched · no self-review · no commit or push without authorization · Thursday noon freeze
 Contract: [DevLens scope](devlens.contract.md)
-Status: plan only; every slice is PLANNED
+Status: slices 1-10 built and independently reviewed as of 2026-10-27. The per-slice `State:` lines below are the original plan values and are stale. The table is current.
+
+| Slice | State | Evidence (verdict as written in the file) |
+|---|---|---|
+| 1 Tracer | VERIFIED-WITH-GAPS | [slice-1-review-r2](slice-1-review-r2.md) |
+| 2 Capture | VERIFIED-WITH-GAPS | [slice-2-verify](slice-2-verify.md) |
+| 3 Recorder and sync | VERIFIED | [slice-3-reverify](slice-3-reverify.md) |
+| 4 Record page | VERIFIED-WITH-GAPS | [slice-4-review](slice-4-review.md) |
+| 5 Linker and re-run | VERIFIED-WITH-GAPS | [slice-5-verify3](slice-5-verify3.md) |
+| 6 Golden take | REVIEWED (pass with findings) | [slice-6-verify](slice-6-verify.md), [slice-6-link-review](slice-6-link-review.md) |
+| 7 Replay | REVIEWED (pass with findings, fixes made after review) | [slice-7-review](slice-7-review.md), fixes in commit f5741ad, light recheck in [slice-10-verify](slice-10-verify.md) |
+| 8 Six starters | REVIEWED (review FAIL, then fixed) | [slice-8-review](slice-8-review.md). The fix was rechecked by the Tech Lead in [slice-8-recheck](slice-8-recheck.md), not by a fresh session |
+| 9 Desktop opt-in | REVIEWED (pass with findings, copy fix made) | [slice-9-review](slice-9-review.md). A person has not tried the picker in a real browser |
+| 10 Integration | REVIEWED (pass with findings) | [slice-10-verify](slice-10-verify.md). A cold `npm install` is untested |
 
 ## Loop
 1. Approve the existing contract and provide a Supabase project · user
