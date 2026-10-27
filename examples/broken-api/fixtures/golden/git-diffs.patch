@@ -1,0 +1,139 @@
+commit cc2f540 starter
+
+diff --git a/README.md b/README.md
+new file mode 100644
+index 0000000..d01fe65
+--- /dev/null
++++ b/README.md
+@@ -0,0 +1 @@
++The client calls the wrong base URL (`/v0` instead of `/api`). Run `npm test` from this directory.
+diff --git a/package.json b/package.json
+new file mode 100644
+index 0000000..d79d0b6
+--- /dev/null
++++ b/package.json
+@@ -0,0 +1,7 @@
++{
++  "private": true,
++  "type": "module",
++  "scripts": {
++    "test": "node --test tests/client.test.js"
++  }
++}
+diff --git a/src/client.js b/src/client.js
+new file mode 100644
+index 0000000..e711e1d
+--- /dev/null
++++ b/src/client.js
+@@ -0,0 +1,16 @@
++const baseURL = 'https://example.invalid/v0';
++
++export async function fetchCurrentUser(fetchImpl) {
++  const response = await fetchImpl(`${baseURL}/users/me`, {
++    method: 'GET',
++    headers: {
++      Accept: 'application/json',
++    },
++  });
++  if (!response.ok) {
++    const detail = await response.text();
++    throw new Error(detail || `request failed (${response.status})`);
++  }
++  const body = await response.json();
++  return { id: body.id, name: body.name };
++}
+diff --git a/tests/client.test.js b/tests/client.test.js
+new file mode 100644
+index 0000000..bfffa5d
+--- /dev/null
++++ b/tests/client.test.js
+@@ -0,0 +1,58 @@
++import test from 'node:test';
++import assert from 'node:assert/strict';
++import { fetchCurrentUser } from '../src/client.js';
++
++// The client reads this token from a module-level `sessionToken` constant in src/client.js.
++const sessionToken = 'session';
++
++function headerValue(headers, name) {
++  if (!headers) return '';
++  if (typeof headers.get === 'function') {
++    return headers.get(name) ?? headers.get(name.toLowerCase()) ?? '';
++  }
++  const want = name.toLowerCase();
++  for (const [key, value] of Object.entries(headers)) {
++    if (String(key).toLowerCase() === want) return String(value);
++  }
++  return '';
++}
++
++function recordedResponse(status, body) {
++  const text = typeof body === 'string' ? body : JSON.stringify(body);
++  return {
++    ok: status >= 200 && status < 300,
++    status,
++    text: async () => text,
++    json: async () => JSON.parse(text),
++  };
++}
++
++test('loads the current user', async () => {
++  const seen = { url: '', headers: undefined };
++  const fetchImpl = async (url, init = {}) => {
++    seen.url = String(url);
++    seen.headers = init.headers;
++    const urlOk = seen.url === 'https://example.invalid/api/users/me';
++    const authOk = headerValue(init.headers, 'authorization') === `Bearer ${sessionToken}`;
++    if (!urlOk) return recordedResponse(404, 'not found');
++    if (!authOk) return recordedResponse(401, 'unauthorized');
++    return recordedResponse(200, { id: 'user_1', name: 'Ada Lovelace' });
++  };
++
++  let result;
++  let thrown;
++  try {
++    result = await fetchCurrentUser(fetchImpl);
++  } catch (error) {
++    thrown = error;
++  }
++
++  if (seen.url !== 'https://example.invalid/api/users/me') {
++    assert.fail('wrong base URL: expected /api, received /v0');
++  }
++  if (headerValue(seen.headers, 'authorization') !== `Bearer ${sessionToken}`) {
++    assert.fail('expected Authorization header');
++  }
++  if (thrown) throw thrown;
++  assert.deepEqual(result, { id: 'user_1', name: 'Ada Lovelace' });
++});
+commit 5f95ece first-fix
+
+diff --git a/src/client.js b/src/client.js
+index e711e1d..e34b69f 100644
+--- a/src/client.js
++++ b/src/client.js
+@@ -1,4 +1,4 @@
+-const baseURL = 'https://example.invalid/v0';
++const baseURL = 'https://example.invalid/api';
+ 
+ export async function fetchCurrentUser(fetchImpl) {
+   const response = await fetchImpl(`${baseURL}/users/me`, {
+commit 71d8fb2 final-fix
+
+diff --git a/src/client.js b/src/client.js
+index e34b69f..2f4c1dc 100644
+--- a/src/client.js
++++ b/src/client.js
+@@ -1,10 +1,12 @@
+ const baseURL = 'https://example.invalid/api';
++const sessionToken = 'session';
+ 
+ export async function fetchCurrentUser(fetchImpl) {
+   const response = await fetchImpl(`${baseURL}/users/me`, {
+     method: 'GET',
+     headers: {
+       Accept: 'application/json',
++      Authorization: `Bearer ${sessionToken}`,
+     },
+   });
+   if (!response.ok) {
