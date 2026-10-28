@@ -20,7 +20,9 @@
     "usage:golden": "tsx packages/core/usage.ts",
     "test:replay": "vitest run apps/web/replay apps/web/questions.test.ts",
     "test:questions": "vitest run packages/questions",
-    "build": "next build apps/web"
+    "build": "next build apps/web",
+    "test:agent": "vitest run packages/agent",
+    "agent:smoke": "tsx packages/agent/src/smoke.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0",
