@@ -126,8 +126,8 @@ Repo: https://github.com/yeruvamaheswar/DevLens
 | EVAL-21 | REQ-22, NOT-1 | A unit test reproduces the golden usage totals. The page has no efficiency, score, or rank words. | unit | not run |
 | EVAL-22 | REQ-23 | An answer renders verbatim with its label. The no-answer line shows only when no answer exists. | unit | not run |
 | EVAL-23 | REQ-24, NOT-1 | `npm run test:questions`: adding `react` asks one question naming Vue and Angular; `react-dom` after `react` asks nothing; a `devDependencies` test tool asks the test-framework question; no new dependency asks nothing. | unit | pass (2026-10-27, commit 7adfbfb) |
-| EVAL-24 | REQ-25, NOT-7, NOT-10, DEC-15 | `npm run test:agent`: with the opt-in off, no model call happens; a fake engine's question is kept only when it cites real event ids; a timeout or error asks nothing and is not retried; a question naming a score, rank, or hire verdict is dropped; the engine command allows only read-only tools and denies secret files. | unit | not run |
-| EVAL-25 | REQ-26 | `npm run test:record`: a new question shows a pop-up that moves to the queue after 10 seconds; a queued question can be answered or skipped later; with the opt-in off, `/record` renders as before. | unit | not run |
+| EVAL-24 | REQ-25, NOT-7, NOT-10, DEC-15 | `npm run test:agent`: with the opt-in off, no model call happens; a fake engine's question is kept only when it cites real event ids; a timeout or error asks nothing and is not retried; a question naming a score, rank, or hire verdict is dropped; the engine command allows only read-only tools and denies secret files. | unit | pass (2026-10-28, commit 97139d1, 57 tests) |
+| EVAL-25 | REQ-26 | `npm run test:record`: a new question shows a pop-up that moves to the queue after 10 seconds; a queued question can be answered or skipped later; with the opt-in off, `/record` renders as before. | unit | pass (2026-10-28, commit a5fd118, test:record 45) |
 | EVAL-20 | REQ-20, NOT-4, REQ-21 | The Thursday demo has no week strip, or any strip on screen is labeled "not in this build." | human | not run |
 
 ## Infrastructure

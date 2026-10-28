@@ -210,7 +210,7 @@ footer{margin-top:3.5rem;padding-top:.8rem;border-top:1px solid var(--rule);font
 }
 </style>
 </head>
-<body data-hash="97d3f375b191" data-repo="DevLens">
+<body data-hash="5ae1e7b87619" data-repo="DevLens">
 <script type="text/plain" id="src">---
 kind: plan
 title: DevLens hackathon scope
@@ -339,8 +339,8 @@ Repo: https://github.com/yeruvamaheswar/DevLens
 | EVAL-21 | REQ-22, NOT-1 | A unit test reproduces the golden usage totals. The page has no efficiency, score, or rank words. | unit | not run |
 | EVAL-22 | REQ-23 | An answer renders verbatim with its label. The no-answer line shows only when no answer exists. | unit | not run |
 | EVAL-23 | REQ-24, NOT-1 | `npm run test:questions`: adding `react` asks one question naming Vue and Angular; `react-dom` after `react` asks nothing; a `devDependencies` test tool asks the test-framework question; no new dependency asks nothing. | unit | pass (2026-10-27, commit 7adfbfb) |
-| EVAL-24 | REQ-25, NOT-7, NOT-10, DEC-15 | `npm run test:agent`: with the opt-in off, no model call happens; a fake engine's question is kept only when it cites real event ids; a timeout or error asks nothing and is not retried; a question naming a score, rank, or hire verdict is dropped; the engine command allows only read-only tools and denies secret files. | unit | not run |
-| EVAL-25 | REQ-26 | `npm run test:record`: a new question shows a pop-up that moves to the queue after 10 seconds; a queued question can be answered or skipped later; with the opt-in off, `/record` renders as before. | unit | not run |
+| EVAL-24 | REQ-25, NOT-7, NOT-10, DEC-15 | `npm run test:agent`: with the opt-in off, no model call happens; a fake engine's question is kept only when it cites real event ids; a timeout or error asks nothing and is not retried; a question naming a score, rank, or hire verdict is dropped; the engine command allows only read-only tools and denies secret files. | unit | pass (2026-10-28, commit 97139d1, 57 tests) |
+| EVAL-25 | REQ-26 | `npm run test:record`: a new question shows a pop-up that moves to the queue after 10 seconds; a queued question can be answered or skipped later; with the opt-in off, `/record` renders as before. | unit | pass (2026-10-28, commit a5fd118, test:record 45) |
 | EVAL-20 | REQ-20, NOT-4, REQ-21 | The Thursday demo has no week strip, or any strip on screen is labeled "not in this build." | human | not run |
 
 ## Infrastructure
@@ -532,7 +532,7 @@ Each scenario keeps the same shape. The starter fails. A plausible first fix fai
     <div><span class="lbl">Status</span><div class="val" id="status"></div></div>
     <div><span class="lbl">Dated</span><div class="val" id="dated"></div></div>
     <div><span class="lbl">Entries done</span><div class="val" id="count"></div></div>
-    <div><span class="lbl">Page</span><div class="val hash">97d3f375b191</div></div>
+    <div><span class="lbl">Page</span><div class="val hash">5ae1e7b87619</div></div>
   </header>
   <div class="layout">
     <nav class="contents" aria-label="Contents"><span class="lbl">Contents</span><ol id="toc"></ol></nav>
@@ -540,7 +540,7 @@ Each scenario keeps the same shape. The starter fails. A plausible first fix fai
       <div class="gutter" id="gutter" aria-hidden="true"></div>
       <section id="brief" class="sec" style="margin-top:0" aria-label="Brief"></section>
       <div id="sections"></div>
-      <footer>Generated from plans/devlens.contract.md in DevLens by md-view.sh · built 2026-10-27 21:41 · page 97d3f375b191 (source + template). Agents: edit devlens.contract.md, then rebuild. Never edit this page.</footer>
+      <footer>Generated from plans/devlens.contract.md in DevLens by md-view.sh · built 2026-10-27 23:27 · page 5ae1e7b87619 (source + template). Agents: edit devlens.contract.md, then rebuild. Never edit this page.</footer>
     </main>
   </div>
 </div>
