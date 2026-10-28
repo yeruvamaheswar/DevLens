@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>DevLens replay: claim and proof</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--g:#fafafa;--ink:#0a0a0a;--mut:#737373;--line:#d4d4d4;--soft:#f0f0f0;--acc:#3b5bfd}
+body{width:1440px;height:900px;overflow:hidden;background:var(--g);color:var(--ink);font:400 13px/1.4 Inter,system-ui,sans-serif}
+b,h1,h2{font-weight:600}
+.mono,pre{font:400 12px/1.5 "JetBrains Mono",ui-monospace,Menlo,monospace}
+.bar{height:44px;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 20px;gap:28px}
+.bar nav{display:flex;gap:20px;color:var(--mut)}
+.bar nav .on{color:var(--ink);border-bottom:2px solid var(--acc);padding:13px 0 11px}
+.bar .take{margin-left:auto;color:var(--mut)}
+.main{display:grid;grid-template-columns:268px 1fr 424px;height:856px}
+.col{padding:16px 20px;overflow:hidden;border-right:1px solid var(--line)}
+.col:last-child{border:0}
+h2{font-size:13px;margin-bottom:10px}
+.cap{color:var(--mut);font-size:12px}
+.ev{display:grid;grid-template-columns:38px 1fr;gap:2px 8px;padding:7px 0;border-top:1px solid var(--line)}
+.ev .t{color:var(--mut)}
+.ev .tag{grid-column:2;font-size:11px;font-weight:600;color:var(--mut)}
+.ev.sep{margin-top:6px}
+.sess{font-size:11px;font-weight:600;color:var(--mut);padding:10px 0 4px;text-transform:none}
+.tag.obs::before,.tag.rd::before,.tag.rr::before,.tag.dw::before,.tag.unk::before{content:"";display:inline-block;width:7px;height:7px;margin-right:6px;border:1px solid var(--ink);vertical-align:0}
+.tag.obs::before{background:var(--ink)}
+.tag.rd::before{border-style:dashed}
+.tag.rr::before{background:var(--acc);border-color:var(--acc)}
+.tag.dw::before{border-radius:50%}
+.tag.unk::before{border-style:dotted;border-width:2px}
+.row{margin-bottom:12px}
+.claim{display:flex;gap:10px;align-items:baseline;padding:8px 12px;border:1px solid var(--ink);background:#fff;font-weight:600;font-size:14px}
+.claim i{font:600 11px "JetBrains Mono",monospace;color:var(--acc);font-style:normal}
+.proof{display:grid;grid-template-columns:1fr 1fr;gap:0;margin-top:-1px}
+.pn{border:1px solid var(--line);background:#fff;padding:8px 12px;min-height:128px;margin-right:-1px}
+.pn h3{font-size:11px;font-weight:600;color:var(--mut);margin-bottom:6px;display:flex;justify-content:space-between}
+.fail{font-weight:600}
+pre{white-space:pre-wrap;word-break:break-all}
+.del{background:var(--soft);display:block}
+.add{background:#fff;border-left:2px solid var(--acc);display:block;padding-left:4px}
+.del,.add{padding-right:2px}
+.pn p{margin-top:6px}
+.vid{height:176px;border:1px solid var(--ink);background:var(--soft);position:relative;margin-bottom:6px;display:flex;align-items:center;justify-content:center;color:var(--mut)}
+.vid .tc{position:absolute;left:0;right:0;bottom:0;height:26px;border-top:1px solid var(--line);background:#fff;display:flex;align-items:center;gap:10px;padding:0 10px;color:var(--ink)}
+.trk{flex:1;height:3px;background:var(--line);position:relative}
+.trk u{position:absolute;left:0;top:0;height:3px;width:11px;background:var(--acc)}
+.q{border-top:1px solid var(--line);padding:6px 0}
+.q .a{margin-top:3px;padding-left:10px;border-left:2px solid var(--ink)}
+.lab{font-size:11px;color:var(--mut)}
+.unk{border:2px solid var(--ink);background:#fff;padding:8px 12px;margin-top:10px}
+.unk h2{margin-bottom:4px}
+.unk ul{list-style:none}
+.unk li{padding:2px 0 2px 14px;position:relative}
+.unk li::before{content:"?";position:absolute;left:0;font-weight:600}
+.use{margin-top:10px;padding-top:8px;border-top:1px solid var(--line);color:var(--mut);font-size:12px}
+</style></head><body>
+<header class="bar"><b>DevLens</b>
+<nav><span class="on">Replay</span><span>Record</span><span>Scenarios</span></nav>
+<span class="take">broken-api golden take · 2026-10-27 · window recording · 4 min 38 s · consented · audio off · camera off</span></header>
+<div class="main">
+<aside class="col">
+<h2>Session timeline</h2>
+<div class="sess">Session 1</div>
+<div class="ev"><span class="t mono">0:30</span><span>Test failed: wrong base URL</span><span class="tag obs">Observed</span></div>
+<div class="ev"><span class="t mono">s1</span><span>Agent edited src/client.js</span><span class="tag obs">Observed</span></div>
+<div class="ev"><span class="t mono">s1</span><span>Test failed: expected Authorization header</span><span class="tag obs">Observed</span></div>
+<div class="sess">Session 2 (same prompt)</div>
+<div class="ev"><span class="t mono">s2</span><span>Test failed: expected Authorization header</span><span class="tag obs">Observed</span></div>
+<div class="ev"><span class="t mono">s2</span><span>Agent edited src/client.js</span><span class="tag obs">Observed</span></div>
+<div class="ev"><span class="t mono">2:58</span><span>Test passed, 2 of 2 assertions</span><span class="tag obs">Observed</span></div>
+<div class="ev sep"><span class="t mono">after</span><span>Separate re-run: passed. A worker ran it, not the session.</span><span class="tag rr">Separate re-run</span></div>
+<div class="ev"><span class="t mono">link</span><span>rule-5-later-pass-v1 verifies the pass against the session 2 edits. First fix is superseded, still shown.</span><span class="tag rd">Rule-derived</span></div>
+<div class="ev"><span class="t mono">Q1–3</span><span>Answers written after the session</span><span class="tag dw">Developer wrote</span></div>
+<div class="ev"><span class="t mono">git</span><span>First-fix and final-fix commits: author not in any hooked event</span><span class="tag unk">Unknown</span></div>
+<p class="cap" style="margin-top:12px">A link is not a cause.</p>
+</aside>
+<main class="col">
+<h2>What happened, with the proof beside each claim</h2>
+<section class="row">
+<div class="claim"><i>1</i>The first test failed: wrong base URL</div>
+<div class="proof">
+<div class="pn"><h3><span>Test output</span><span class="tag obs">Observed · 0:30</span></h3><pre class="fail">FAILED
+wrong base URL: expected /api, received /v0</pre><p class="cap">Prompt ran <span class="mono">npm test</span> as written, no pipes, no flags.</p></div>
+<div class="pn"><h3><span>Event id</span><span class="tag obs">Observed · session 1</span></h3><pre>ec6f600a…:toolu_018K2hAF…:post</pre><p class="cap">Open this event in the video at 0:30.</p></div>
+</div></section>
+<section class="row">
+<div class="claim"><i>2</i>The agent changed the base URL; the next test still failed</div>
+<div class="proof">
+<div class="pn"><h3><span>Diff, src/client.js</span><span class="tag obs">Observed · session 1</span></h3><pre><span class="del">- const baseURL = 'https://example.invalid/v0';</span><span class="add">+ const baseURL = 'https://example.invalid/api';</span></pre><p class="cap">Superseded by the session 2 edits. Kept, never hidden.</p></div>
+<div class="pn"><h3><span>Next test output</span><span class="tag obs">Observed · session 1</span></h3><pre class="fail">FAILED
+expected Authorization header</pre><p class="cap">The base URL error is gone. A new error appears.</p></div>
+</div></section>
+<section class="row">
+<div class="claim"><i>3</i>Session 2 added the Authorization header; the test passed, and a separate re-run passed</div>
+<div class="proof">
+<div class="pn"><h3><span>Diff, src/client.js</span><span class="tag obs">Observed · session 2</span></h3><pre><span class="add">+ const sessionToken = 'session';</span><span class="add">+      Authorization: `Bearer ${sessionToken}`,</span></pre><p class="cap">Rule-derived link: later pass verifies these edits.</p></div>
+<div class="pn"><h3><span>Two results, kept apart</span></h3><pre><b>Session test, 2:58</b>  PASSED, 2 of 2 assertions</pre><p class="tag rr" style="font-size:11px;font-weight:600;color:var(--mut)">Separate re-run</p><pre style="margin-top:2px">PASSED  (a worker, not the session)</pre></div>
+</div></section>
+</main>
+<aside class="col">
+<h2>Video</h2>
+<div class="vid">Window recording, audio off, camera off<div class="tc mono"><span>0:30 / 4:38</span><div class="trk"><u></u></div></div></div>
+<h2 style="margin-top:14px;margin-bottom:2px">Questions from the rules</h2>
+<div class="q"><b>Q1</b> The test failed, and the next prompt did not mention the error. Was that deliberate?
+<div class="a">"nope"<div class="lab">Developer answer, written after the session on 2026-10-27</div></div></div>
+<div class="q"><b>Q2</b> Was an agent edit kept with no test until the end?
+<div class="a">"not sure."<div class="lab">Developer answer, written after the session on 2026-10-27</div></div></div>
+<div class="q"><b>Q3</b> Who made the first-fix and final-fix commits? Git shows them, but no hooked event does.
+<div class="a">"not sure"<div class="lab">Developer answer, written after the session on 2026-10-27</div></div></div>
+<div class="unk"><h2>Unknowns and not captured</h2>
+<ul><li>Commits were made outside the recorded sessions.</li><li>An inferred link is not a cause.</li><li>A passing test may not be a meaningful test.</li><li>Nothing here predicts job performance.</li></ul>
+<p style="margin-top:6px"><b>Not captured:</b> reasoning, the editor, other terminals, camera, microphone.</p></div>
+<p class="use">Coding-agent usage, context only: 11 requests · claude-sonnet-5-5 · ≈ $0.42 list-price equivalent · billed to the plan (assumed). Not a measure of skill or efficiency.</p>
+</aside>
+</div></body></html>

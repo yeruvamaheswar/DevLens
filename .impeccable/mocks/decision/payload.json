@@ -1,0 +1,67 @@
+{
+  "title": "Choose the visual world for DevLens",
+  "question": "The roll assigned Transit Line. Keep it, take an alternate, or re-roll. It applies to /replay first, then home and /record.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Transit Line",
+      "kicker": "THE ROLL",
+      "lineage": "Swiss-style metro line diagrams (Vignelli, Beck)",
+      "thesis": "The session is a line you ride: stations are events, the fail-to-pass route is the one coloured line.",
+      "palette": ["#f3f5f4", "#14181c", "#1f4fd6", "#d7262e", "#0b8a4a", "#e6a100"],
+      "materials": ["enamel-flat signage colour", "45/90-degree line geometry", "grotesk station labels"],
+      "viewport": "Top: the take drawn as a line diagram with red failed-test stations, green terminus, amber sandbox line at the interchange. Below: video left, the selected station's evidence (diff, test, question, verbatim answer) right; unknowns strip always visible.",
+      "risk": "If the line is decoration instead of the click target, it reads as an infographic, not a tool.",
+      "raised": [
+        {"from": "challenger-orienteering", "raise": "One reserved course colour rides over the evidence and never edits it: the fail-to-pass route."},
+        {"from": "challenger-ticket-wallet", "raise": "Nothing disappears, it cancels: the superseded patch stays on the line, stamped superseded."},
+        {"from": "challenger-acetate-manual", "raise": "Provenance is a layer: observed evidence is the ground, rule links and developer words sit on labelled layers above it."},
+        {"from": "challenger-midnight-transit", "raise": "Selecting a station focuses its corridor while the rest of the network stays readable."},
+        {"from": "challenger-type-specimen", "raise": "Hierarchy by scale contrast, not by boxes and cards."}
+      ],
+      "html": ".impeccable/mocks/decision/assigned.html"
+    },
+    {
+      "id": "model-pick",
+      "label": "Annotated Paper",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "scholarly citation apparatus: superscripts, footnotes, margin notes",
+      "thesis": "Every sentence on the page is a claim, and every claim carries its citation to an event.",
+      "palette": ["#ffffff", "#121212", "#2a5bd7", "#b3261e", "#6b6b6b"],
+      "materials": ["reading column", "superscript citations", "margin notes"],
+      "viewport": "A numbered list of claims in a reading column, superscript event ids opening margin notes with the raw event; the video sits in the right margin.",
+      "risk": "Closest to the editorial-hairline look many AI builds land on; familiar and calm, less memorable.",
+      "html": ".impeccable/mocks/decision/model-pick.html"
+    },
+    {
+      "id": "challenger-claim-proof",
+      "label": "Claim and Proof",
+      "verdict": "competitive",
+      "lineage": "monochrome software product pages",
+      "thesis": "Each claim sits beside the interface detail that proves it.",
+      "palette": ["#fafafa", "#0a0a0a", "#737373", "#3b5bfd"],
+      "materials": ["neutral scale", "framed evidence panels"],
+      "viewport": "Alternating rows: a one-line claim, then its proof panel (test output, diff, re-run).",
+      "case": "Strong product clarity; weak audience identification, it reads as marketing.",
+      "risk": "Can look like a landing page instead of a working review screen.",
+      "html": ".impeccable/mocks/decision/challenger-claim-proof.html"
+    },
+    {"id": "challenger-orienteering", "label": "Orienteering Map", "verdict": "declined", "lineage": "ISOM orienteering maps", "thesis": "A course rides in purple over fixed terrain.", "palette": ["#ffffff", "#7a3a1e", "#a5368f"], "materials": ["contour texture"], "viewport": "Map terrain with a purple course.", "risk": "Reviewers do not read maps to review code.", "case": "Loses both axes.", "kept": "One reserved colour for the route that never edits the ground."},
+    {"id": "challenger-ticket-wallet", "label": "Jet-age Ticket Wallet", "verdict": "declined", "lineage": "airline coupon books", "thesis": "One leg per coupon; void stamps cancel, never delete.", "palette": ["#ffffff", "#1b2a52", "#c8102e"], "materials": ["carbon coupons"], "viewport": "Coupons per session.", "risk": "Nostalgia costume on a work screen.", "case": "Loses both axes.", "kept": "Nothing disappears, it cancels."},
+    {"id": "challenger-acetate-manual", "label": "Acetate Tab Manual", "verdict": "declined", "lineage": "boxed-software manuals", "thesis": "Leaves on plies above a coloured board.", "palette": ["#f2efe6", "#e8a400", "#1f2d6b"], "materials": ["acetate leaves"], "viewport": "Tabbed manual pages.", "risk": "Heavy material for a few-minute review.", "case": "Loses both axes.", "kept": "Provenance as visible layers."},
+    {"id": "challenger-midnight-transit", "label": "Midnight Transit Mural", "verdict": "declined", "lineage": "enamel metro murals", "thesis": "The same line world on midnight-blue enamel.", "palette": ["#0f1a3a", "#f4f4f0", "#e0312b", "#2d5be3"], "materials": ["enamel"], "viewport": "Dark line diagram.", "risk": "Drifts toward the dark neon AI look you ruled out.", "case": "Near-duplicate of the roll; loses on your 'no generic AI look' constraint.", "kept": "Focus the chosen corridor, keep transfer context."},
+    {"id": "challenger-type-specimen", "label": "Variable Type Specimen", "verdict": "declined", "lineage": "foundry specimens", "thesis": "Hierarchy by scale alone.", "palette": ["#fbfbf9", "#0b0b0b", "#ff4d00"], "materials": ["glyph grid"], "viewport": "Giant glyph.", "risk": "No relation to code review.", "case": "Loses both axes.", "kept": "Scale contrast instead of boxes."}
+  ],
+  "reroll": {"registers": ["safer", "bolder"]},
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "A clean developer-tool review page, like a pull request with CI checks.",
+    "palette": ["#ffffff", "#1f2328", "#0969da", "#cf222e", "#1a7f37"],
+    "materials": ["neutral panels", "check rows", "diff view"],
+    "viewport": "Header, checks list, video and diff in tabs, questions in a sidebar.",
+    "risk": "Indistinguishable from any dev tool by design.",
+    "html": ".impeccable/mocks/decision/canon.html"
+  },
+  "steer": true
+}

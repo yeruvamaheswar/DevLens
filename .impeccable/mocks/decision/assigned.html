@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>DevLens Replay - Transit Line</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap">
+<style>
+:root{--g:#f3f5f4;--k:#14181c;--b:#1f4fd6;--r:#d7262e;--ok:#0b8a4a;--a:#e6a100;--m:#5b646b;--ln:#c9cfcc}
+*{box-sizing:border-box;margin:0}
+body{width:1440px;height:900px;overflow:hidden;background:var(--g);color:var(--k);font:400 13px/1.35 "Hanken Grotesk","Public Sans",system-ui,sans-serif;display:grid;grid-template-rows:48px 276px 448px 128px}
+mono,code,pre,.mo{font-family:ui-monospace,"SF Mono",Menlo,monospace}
+header{display:flex;align-items:center;padding:0 32px;border-bottom:2px solid var(--k);gap:36px}
+.wm{display:flex;align-items:center;gap:10px;font:800 19px/1 inherit;letter-spacing:-.02em}
+nav{display:flex;gap:4px;height:100%}
+nav a{display:flex;align-items:center;padding:0 14px;font:600 13px/1 inherit;color:var(--m);border-bottom:4px solid transparent}
+nav a.on{color:var(--k);border-bottom-color:var(--b)}
+.take{margin-left:auto;font:500 12px/1 inherit;color:var(--k)}.take b{font-weight:700}
+svg text{fill:var(--k);font-family:"Hanken Grotesk",system-ui,sans-serif}
+.l1{font-size:13px;font-weight:700}.l2{font-size:12px}.cap{font-size:11px;font-weight:700;letter-spacing:.09em}.tc{font-size:12px;font-weight:700}
+.low{display:grid;grid-template-columns:820px 1fr;gap:48px;padding:20px 32px 0;border-top:1px solid var(--ln)}
+.vid{height:330px;background:var(--k);position:relative;padding:20px 24px;color:#d5dad7}
+.vid pre{font:13.5px/1.7 ui-monospace,Menlo,monospace}.vid .f{color:#ff8f94;font-weight:700}.vid .d{color:#8d979e}
+.vid .tag{position:absolute;top:14px;right:16px;font:600 11px/1 inherit;letter-spacing:.08em;color:#8d979e}
+.vid .tcode{position:absolute;right:0;bottom:0;background:#fff;color:var(--k);font:700 15px/1 ui-monospace,Menlo,monospace;padding:9px 14px}
+.ev{border-left:2px solid var(--k);padding-left:28px}
+h2{font:800 26px/1.1 inherit;letter-spacing:-.02em;margin-bottom:12px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.chip{display:inline-flex;align-items:center;gap:6px;font:600 11.5px/1 inherit;padding:5px 8px;border:1.5px solid var(--k);background:#fff;white-space:nowrap}
+.chip i{width:9px;height:9px;display:inline-block}
+.ob i{background:var(--k)}.rd i{background:var(--b);transform:rotate(45deg)}.rr i{background:var(--a);width:13px;height:5px}
+.dw i{border:2px solid var(--k);border-radius:50%}.un{border-style:dashed}.un i{width:auto;height:auto;font-style:normal;font-weight:800;color:var(--r)}
+.h3{font:700 11px/1 inherit;letter-spacing:.09em;color:var(--m);margin:0 0 7px;display:flex;align-items:center;gap:8px}
+.as{font:600 14px/1.3 ui-monospace,Menlo,monospace;border-left:6px solid var(--r);padding:4px 0 4px 10px;margin-bottom:14px}
+.df{font:12.5px/1.65 ui-monospace,Menlo,monospace;margin-bottom:14px}
+.df div{padding:0 10px;white-space:nowrap}.df .m{background:#f7dcde;border-left:4px solid var(--r)}.df .p{background:#d6eddf;border-left:4px solid var(--ok)}
+.q{border-top:1px solid var(--k);padding-top:12px}.q p{font-size:13px}
+.q .a{font:800 30px/1.15 inherit;letter-spacing:-.02em;margin:4px 0 2px}.q small{font:12px/1.3 inherit;color:var(--m)}
+.ids{font:11px/1.3 ui-monospace,Menlo,monospace;color:var(--m);margin-top:5px}
+footer{background:var(--k);color:#fff;padding:12px 32px 0;display:grid;grid-template-columns:1.25fr 1fr;column-gap:56px;grid-template-rows:auto 1fr auto}
+footer h4{font:800 12px/1 inherit;letter-spacing:.1em;display:flex;align-items:center;gap:10px;margin-bottom:8px}
+footer h4 s{display:inline-block;width:16px;height:16px;border:2px dashed var(--a);text-decoration:none;text-align:center;font:800 11px/12px inherit;color:var(--a)}
+footer ul{list-style:none;padding:0;font:500 14px/1.45 inherit}footer li::before{content:"";display:inline-block;width:8px;height:8px;margin-right:9px;background:var(--a)}
+.un2{columns:2;column-gap:28px}.nc{display:flex;flex-wrap:wrap;gap:4px 22px}.nc li::before{background:transparent;border:2px solid #aab3b9}
+.use{grid-column:1/3;border-top:1px solid #3a434a;padding:7px 0 8px;font:500 12px/1.3 inherit;color:#dfe4e1}.use b{color:#fff}
+</style></head><body>
+<header>
+ <div class="wm"><svg width="34" height="18" viewBox="0 0 34 18"><path d="M3 9H20L28 3" stroke="#1f4fd6" stroke-width="4" fill="none"/><circle cx="4" cy="9" r="3.5" fill="#fff" stroke="#14181c" stroke-width="2"/><circle cx="28" cy="3" r="3" fill="#0b8a4a"/></svg>DevLens</div>
+ <nav><a class="on">Replay</a><a>Record</a><a>Scenarios</a></nav>
+ <div class="take"><b>broken-api</b> · golden take · 2026-10-27 · window · consented, audio off · 4 min 38 s</div>
+</header>
+
+<svg width="1440" height="276" viewBox="0 0 1440 276">
+ <text class="cap" x="60" y="24">SESSION 1</text><text class="cap" x="640" y="98">SESSION 2</text>
+ <g fill="none" stroke-linejoin="miter">
+  <path d="M90 100H520L590 170H1080" stroke="#1f4fd6" stroke-width="6"/>
+  <path d="M200 100H520L590 170H1080" stroke="#1f4fd6" stroke-width="14"/>
+  <path d="M1080 170L1140 230H1330" stroke="#e6a100" stroke-width="6"/>
+ </g>
+ <circle cx="200" cy="100" r="21" fill="none" stroke="#14181c" stroke-width="2.5"/>
+ <g fill="#fff" stroke-width="4">
+  <circle cx="90" cy="100" r="9" stroke="#1f4fd6"/><circle cx="660" cy="170" r="9" stroke="#1f4fd6"/>
+  <circle cx="320" cy="100" r="7" stroke="#1f4fd6" stroke-width="3"/><circle cx="870" cy="170" r="7" stroke="#1f4fd6" stroke-width="3"/><circle cx="970" cy="170" r="7" stroke="#1f4fd6" stroke-width="3"/>
+  <g stroke="#d7262e" stroke-width="5"><circle cx="200" cy="100" r="11"/><circle cx="440" cy="100" r="11"/><circle cx="770" cy="170" r="11"/></g>
+  <circle cx="555" cy="135" r="8" stroke="#14181c" stroke-width="3"/>
+  <circle cx="1080" cy="170" r="22" stroke="#14181c" stroke-width="3"/><circle cx="1330" cy="230" r="9" stroke="#e6a100" stroke-width="5"/>
+ </g>
+ <circle cx="1080" cy="170" r="14" fill="#0b8a4a"/>
+ <g text-anchor="middle">
+  <text class="l1" x="90" y="48">prompt</text><text class="l2" x="90" y="62">npm test, as written</text>
+  <text class="l1" x="200" y="48">test failed</text><text class="l2" x="200" y="62">wrong base URL</text><text class="tc" x="200" y="132">0:30</text>
+  <text class="l1" x="320" y="62">edit</text><text class="l2" x="320" y="76">src/client.js</text>
+  <text class="l1" x="440" y="48">test failed</text><text class="l2" x="440" y="62">expected Authorization</text><text class="l2" x="440" y="76">header</text>
+  <text class="l1" x="660" y="118">prompt</text><text class="l2" x="660" y="132">same prompt</text>
+  <text class="l1" x="770" y="104">test failed</text><text class="l2" x="770" y="118">expected Authorization</text><text class="l2" x="770" y="132">header</text>
+  <text class="l1" x="870" y="132">edit</text><text class="l2" x="870" y="146">src/client.js</text>
+  <text class="l1" x="970" y="132">edit</text><text class="l2" x="970" y="146">src/client.js</text>
+  <text class="l1" x="1080" y="118" style="font-size:15px">test PASSED</text><text class="l2" x="1080" y="134">2 of 2 assertions</text><text class="tc" x="1080" y="210">2:58</text>
+ </g>
+ <rect x="274" y="112" width="92" height="19" fill="#fff" stroke="#14181c" stroke-width="1.5"/><text class="cap" x="320" y="125.5" text-anchor="middle" style="font-size:10.5px">SUPERSEDED</text>
+ <text class="l2" x="538" y="159" text-anchor="end">transfer</text>
+ <text class="l1" x="1150" y="220">Separate re-run</text><text class="l2" x="1150" y="252">a worker, not the session</text><text class="l1" x="1346" y="235">passed</text>
+ <g class="l2"><path d="M1182 48H1216" stroke="#1f4fd6" stroke-width="14"/><text x="1230" y="52">Fail to pass route</text>
+  <path d="M1182 72H1216" stroke="#1f4fd6" stroke-width="6"/><text x="1230" y="76">Session line, kept in full</text>
+  <path d="M1182 96H1216" stroke="#e6a100" stroke-width="6"/><text x="1230" y="100">Separate re-run line</text></g>
+ <text class="l2" x="60" y="266">Thick route: rule-5-later-pass-v1 verifies the passing test against the session 2 edits. A link is not a cause.</text>
+</svg>
+
+<section class="low">
+ <div>
+  <div class="vid"><span class="tag">WINDOW RECORDING · AUDIO OFF · CAMERA OFF</span>
+<pre><span class="d">$</span> npm test
+<span class="f">FAIL</span>  wrong base URL: expected /api, received /v0
+<span class="d">$</span> _</pre>
+   <span class="tcode">0:30 / 4:38</span></div>
+  <svg width="820" height="58" viewBox="0 0 820 58">
+   <rect x="0" y="23" width="820" height="6" fill="#c9cfcc"/>
+   <rect x="16" y="23" width="314" height="6" fill="#1f4fd6"/><rect x="377" y="23" width="148" height="6" fill="#1f4fd6"/>
+   <g stroke-width="4"><path d="M16 14V38M180 14V38M377 14V38M467 14V38M492 14V38" stroke="#1f4fd6"/><path d="M89 14V38M279 14V38M426 14V38" stroke="#d7262e"/><path d="M525 10V42" stroke="#0b8a4a" stroke-width="6"/></g>
+   <path d="M89 4V48" stroke="#14181c" stroke-width="2"/><path d="M83 0H95L89 8Z" fill="#14181c"/>
+   <g class="tc"><text x="0" y="57" style="font-size:11px;fill:#5b646b">0:00</text><text x="89" y="57" text-anchor="middle">0:30</text><text x="525" y="57" text-anchor="middle">2:58</text><text x="820" y="57" text-anchor="end" style="font-size:11px;fill:#5b646b">4:38</text></g>
+  </svg>
+ </div>
+ <div class="ev">
+  <h2>Station: test failed · 0:30</h2>
+  <div class="chips"><span class="chip ob"><i></i>Observed</span><span class="chip rd"><i></i>Rule-derived</span><span class="chip rr"><i></i>Separate re-run</span><span class="chip dw"><i></i>Developer wrote</span><span class="chip un"><i>?</i>Unknown</span></div>
+  <div class="h3"><span class="chip ob"><i></i>Observed</span>ASSERTION</div>
+  <div class="as">wrong base URL: expected /api, received /v0</div>
+  <div class="h3"><span class="chip ob"><i></i>Observed</span>NEXT AGENT EDIT · SRC/CLIENT.JS · SUPERSEDED, KEPT</div>
+  <div class="df"><div class="m">- const baseURL = 'https://example.invalid/v0';</div><div class="p">+ const baseURL = 'https://example.invalid/api';</div></div>
+  <div class="q">
+   <div class="h3"><span class="chip rd"><i></i>Rule-derived</span>Q1</div>
+   <p>The test failed, and the next prompt did not mention the error. Was that deliberate?</p>
+   <div class="a">“nope”</div>
+   <small><span class="chip dw" style="margin-right:6px"><i></i>Developer wrote</span>Developer answer, written after the session on 2026-10-27</small>
+   <div class="ids">cites ec6f600a…:toolu_018K2hAF…:post</div>
+  </div>
+ </div>
+</section>
+
+<footer>
+ <div><h4><s>?</s>UNKNOWNS</h4><ul class="un2"><li>Commits were made outside the recorded sessions</li><li>An inferred link is not a cause</li><li>A passing test may not be a meaningful test</li><li>Nothing here predicts job performance</li></ul></div>
+ <div><h4>NOT CAPTURED</h4><ul class="nc"><li>Reasoning</li><li>The editor</li><li>Other terminals</li><li>Camera</li><li>Microphone</li></ul></div>
+ <div class="use"><b>Coding-agent usage, context only:</b> 11 requests · claude-sonnet-5-5 · ≈ $0.42 list-price equivalent · billed to the plan (assumed) · Not a measure of skill or efficiency.</div>
+</footer>
+</body></html>

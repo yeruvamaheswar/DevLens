@@ -1,0 +1,218 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-28T02:46:39Z",
+  "title": "Design System: DevLens",
+  "extensions": {
+    "colorMeta": {
+      "cobalt": {
+        "role": "primary",
+        "displayName": "Session Cobalt",
+        "canonical": "#1f4fd6"
+      },
+      "red": {
+        "role": "secondary",
+        "displayName": "Signal Red",
+        "canonical": "#c81e27"
+      },
+      "green": {
+        "role": "secondary",
+        "displayName": "Terminus Green",
+        "canonical": "#0a7d43"
+      },
+      "amber": {
+        "role": "secondary",
+        "displayName": "Re-run Amber",
+        "canonical": "#b07a00"
+      },
+      "ground": {
+        "role": "neutral",
+        "displayName": "Enamel Ground",
+        "canonical": "#f3f5f4"
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#14181c"
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Slate",
+        "canonical": "#4f585f"
+      },
+      "rule": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#c9cfcc"
+      },
+      "band": {
+        "role": "neutral",
+        "displayName": "Limits Band",
+        "canonical": "#14181c"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Home hero heading only (34 to 56px fluid)."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "The developer's verbatim answer, 30px (26px at 720px and below). Evidence station title is 26px (20px on mobile)."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Replay page title and band headings, 20px. Record page title is 26px."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text, tabular numbers."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Column headers and activity caption (0.08em), evidence heading (0.09em). Limits headings are 12px/800/0.1em. Names its own element; never a lead-in above another heading."
+      },
+      "mono": {
+        "displayName": "Mono",
+        "purpose": "Output and diffs 12px/1.55; assertions 14px/600/1.35; ids and citations 11px."
+      }
+    },
+    "shadows": [],
+    "motion": [
+      {
+        "name": "ease-out-expo",
+        "value": "160ms cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Background and colour change on buttons, summary cells and links. Applied only under prefers-reduced-motion: no-preference."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "mobile",
+        "value": "720px"
+      },
+      {
+        "name": "pinned-limits",
+        "value": "1000px"
+      },
+      {
+        "name": "line-vertical",
+        "value": "1040px"
+      },
+      {
+        "name": "lower-collapse",
+        "value": "1100px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Square paper button with ink border.",
+      "html": "<button class=\"ds-btn\">Hide filter</button>",
+      "css": ".ds-btn{font:600 13px/1 inherit;color:var(--ink,#14181c);background:var(--surface,#fff);border:1.5px solid var(--ink,#14181c);padding:10px 14px;cursor:pointer;border-radius:0}.ds-btn:hover{background:var(--cobalt-tint,#e2e9fb)}.ds-btn:focus-visible{outline:3px solid var(--cobalt,#1f4fd6);outline-offset:2px}"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one cobalt action on a surface.",
+      "html": "<button class=\"ds-btn-primary\">Start recording</button>",
+      "css": ".ds-btn-primary{font:600 13px/1 inherit;color:#fff;background:var(--cobalt,#1f4fd6);border:1.5px solid var(--cobalt,#1f4fd6);padding:10px 14px;cursor:pointer;border-radius:0}.ds-btn-primary:hover{background:var(--ink,#14181c);border-color:var(--ink,#14181c)}.ds-btn-primary:focus-visible{outline:3px solid var(--cobalt,#1f4fd6);outline-offset:2px}@media (prefers-color-scheme: dark){.ds-btn-primary{color:#0e1215}.ds-btn-primary:hover{color:var(--ground,#f3f5f4)}}"
+    },
+    {
+      "name": "Provenance Chips",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Marker shape paired with a word for each evidence origin.",
+      "html": "<span class=\"ds-chip ds-chip-obs\"><i></i>Observed</span> <span class=\"ds-chip ds-chip-rule\"><i></i>Rule</span> <span class=\"ds-chip ds-chip-rerun\"><i></i>Re-run</span> <span class=\"ds-chip ds-chip-dev\"><i></i>Developer</span> <span class=\"ds-chip ds-chip-unk\"><i></i>Unknown</span>",
+      "css": ".ds-chip{display:inline-flex;align-items:center;gap:6px;font:600 11.5px/1 inherit;padding:4px 7px;border:1.5px solid var(--ink,#14181c);background:var(--surface,#fff);color:var(--ink,#14181c)}.ds-chip i{display:inline-block;width:9px;height:9px}.ds-chip-obs i{background:var(--ink,#14181c)}.ds-chip-rule i{background:var(--cobalt,#1f4fd6);transform:rotate(45deg) scale(.85)}.ds-chip-rerun i{background:var(--amber,#b07a00);width:13px;height:5px}.ds-chip-dev i{border:2px solid var(--ink,#14181c);border-radius:50%}.ds-chip-unk{border-style:dashed}.ds-chip-unk i{border:1.5px dashed var(--ink,#14181c)}"
+    },
+    {
+      "name": "Top Bar Nav",
+      "kind": "nav",
+      "refersTo": "nav-link-active",
+      "description": "Nav links with a 4px cobalt underline on the current page.",
+      "html": "<nav class=\"ds-nav\"><a href=\"#\" aria-current=\"page\">Replay</a><a href=\"#\">Record</a></nav>",
+      "css": ".ds-nav{display:flex;border-bottom:2px solid var(--ink,#14181c);min-height:48px}.ds-nav a{display:flex;align-items:center;padding:0 14px;font-weight:600;font-size:13px;color:var(--muted,#4f585f);text-decoration:none;border-bottom:4px solid transparent}.ds-nav a:hover{color:var(--ink,#14181c)}.ds-nav a[aria-current=page]{color:var(--ink,#14181c);border-bottom-color:var(--cobalt,#1f4fd6)}.ds-nav a:focus-visible{outline:3px solid var(--cobalt,#1f4fd6);outline-offset:2px}"
+    },
+    {
+      "name": "Summary Cell",
+      "kind": "custom",
+      "refersTo": "summary-cell",
+      "description": "A cell that filters the line; pressed state adds a cobalt top bar. Most hold event-linked counts.",
+      "html": "<button class=\"ds-sum\" aria-pressed=\"true\"><span>Tests failed</span><b>1</b></button>",
+      "css": ".ds-sum{display:grid;gap:2px;min-height:64px;width:160px;padding:8px 10px;text-align:left;font:inherit;color:var(--ink,#14181c);background:transparent;border:0;border-top:4px solid transparent;cursor:pointer}.ds-sum:hover,.ds-sum[aria-pressed=true]{background:var(--surface,#fff)}.ds-sum[aria-pressed=true]{border-top-color:var(--cobalt,#1f4fd6)}.ds-sum:focus-visible{outline:3px solid var(--cobalt,#1f4fd6);outline-offset:2px}.ds-sum b{font-size:16px;font-weight:800;color:var(--red,#c81e27)}.ds-sum span{font-size:12px;font-weight:600;color:var(--muted,#4f585f)}"
+    },
+    {
+      "name": "Transit Line",
+      "kind": "custom",
+      "description": "Signature diagram: session line, thick route, amber re-run line, shaped stations.",
+      "html": "<svg class=\"ds-line\" viewBox=\"0 0 360 110\" width=\"360\" height=\"110\" role=\"img\" aria-label=\"Fail, fix, pass route\"><path d=\"M10 70H70L100 40H260L290 70H350\" fill=\"none\" style=\"stroke:var(--cobalt,#1f4fd6)\" stroke-width=\"6\"/><path d=\"M100 40H260\" fill=\"none\" style=\"stroke:var(--cobalt,#1f4fd6)\" stroke-width=\"14\"/><path d=\"M290 70L320 100H350\" fill=\"none\" style=\"stroke:var(--amber,#b07a00)\" stroke-width=\"6\"/><circle cx=\"130\" cy=\"40\" r=\"11\" stroke-width=\"5\" style=\"fill:var(--station-fill,#fff);stroke:var(--red,#c81e27)\"/><path d=\"M125.5 35.5L134.5 44.5M134.5 35.5L125.5 44.5\" style=\"stroke:var(--red,#c81e27)\" stroke-width=\"2.5\"/><rect x=\"190\" y=\"34\" width=\"12\" height=\"12\" stroke-width=\"3\" transform=\"rotate(45 196 40)\" style=\"fill:var(--station-fill,#fff);stroke:var(--cobalt,#1f4fd6)\"/><circle cx=\"260\" cy=\"40\" r=\"20\" stroke-width=\"3\" style=\"fill:var(--station-fill,#fff);stroke:var(--ink,#14181c)\"/><circle cx=\"260\" cy=\"40\" r=\"13\" style=\"fill:var(--green,#0a7d43)\"/><path d=\"M254 40L258.5 44.5L266.5 35.5\" style=\"stroke:var(--station-fill,#fff)\" stroke-width=\"3\" fill=\"none\"/><rect x=\"331\" y=\"91\" width=\"18\" height=\"18\" rx=\"2\" stroke-width=\"5\" style=\"fill:var(--station-fill,#fff);stroke:var(--amber,#b07a00)\"/></svg>",
+      "css": ".ds-line{display:block;max-width:100%;height:auto}@media (prefers-color-scheme: dark){.ds-line{--station-fill:#0e1215;--cobalt:#7e9fff;--red:#ff6f76;--green:#45c987;--ink:#e8ecea}}"
+    },
+    {
+      "name": "Limits Band",
+      "kind": "custom",
+      "refersTo": "limits-band",
+      "description": "Dark full-bleed band listing unknowns.",
+      "html": "<div class=\"ds-limits\"><h2>Unknowns</h2><ul><li>Test run outside the recording</li><li>Window audio not captured</li></ul></div>",
+      "css": ".ds-limits{background:var(--band,#14181c);color:var(--band-ink,#f3f5f4);padding:24px 32px;font-weight:500}.ds-limits h2{font-size:12px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;margin:0 0 8px}.ds-limits ul{list-style:none;padding:0;margin:0;display:grid;gap:6px}.ds-limits li{display:flex;gap:10px;align-items:baseline}.ds-limits li::before{content:'';flex:none;width:8px;height:8px;background:var(--band-amber,#e6a100)}@media (prefers-color-scheme: dark){.ds-limits{--band:#1b2226;--band-ink:#e8ecea}}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Transit Line",
+    "overview": "The session is a metro diagram you ride. Stations are events. The fail, fix, pass route is the one thick cobalt line. The separate re-run is its own amber line, joined at a transfer. The whole system follows Swiss metro-diagram discipline: cool enamel ground, ink text, flat colour, ruled edges, route and rule lines at 0, 45 and 90 degrees only. Hierarchy comes from scale and weight, not from boxes.\n\nThe mood is calm, exact and civic. It is the opposite of a scoring dashboard. The summary band shows no ratios, percentages or gauges. Most cells are counts linked to the events they count, and the recording-time cell is a clock range linked to its first failure and first pass. The separate re-run cell is a status word (passed, failed, unknown or none) linked to the re-run event. The questions-answered and coding-agent-usage cells are counts with no events: they link to the questions and usage sections of the page. The usage context shows plain counts and dollar prices that do not link to events, and the player note shows frame and box dimensions. No verdict on the developer.",
+    "keyCharacteristics": [
+      "One reserved route colour (cobalt) that never edits evidence.",
+      "State is always a colour plus a word (a label, status text or legend key). Marks on the line, strip, tables and chips add a shape.",
+      "Flat everywhere: no shadows, no gradients, no rounded cards.",
+      "Superseded stations stay on the line and carry a stamp.",
+      "The limits (unknowns, not captured) stay visible: a dark band at the foot and a pinned strip on wide screens.",
+      "Light and dark schemes follow the OS setting."
+    ],
+    "rules": [
+      {
+        "name": "The Reserved Route Rule",
+        "body": "Cobalt marks the route and the way to act. It never recolours evidence such as test output, diffs or the developer's answer. The one evidence tint is the diff: added lines take `green-tint` and deleted lines take `red-tint`, which classify the text and are not a judgment.",
+        "section": "colors"
+      },
+      {
+        "name": "The Meaning Rule",
+        "body": "On the line, in counts and in status marks, red means failed, green means passed and amber means re-run. Do not use them as decoration or as a rank. Named exceptions: diff lines use the red and green tints for deleted and added text, and the recorder uses red for the recording state and live dot and green for the uploaded mark, with cobalt for the live run line.",
+        "section": "colors"
+      },
+      {
+        "name": "The Shape Beside Colour Rule",
+        "body": "Colour never carries state alone. Pair it with a word, and with a marker shape wherever the state is drawn as a mark.",
+        "section": "colors"
+      },
+      {
+        "name": "The Fixed Size Rule",
+        "body": "The base scale is 11, 12, 14, 16, 20, 26 and 30 px; size steps carry hierarchy. The build ships these named exceptions, and new surfaces should prefer the base scale: 13px (nav links, buttons, station titles on the line, table body), 19px (wordmark), 15px (passing-station title), 11.5px (chips), 10.5px (SUPERSEDED stamp), 12px uppercase 800 (limits headings) and the fluid hero (34 to 56 px).",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat Enamel Rule",
+        "body": "Nothing is raised: no shadow, blur or gradient lifts anything off the page. Selection is a stroke, a top bar of cobalt, or a tint fill.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** keep each summary-band cell one of three kinds: a count or a time linked to the events it counts (the re-run cell shows a status word, linked to the re-run event), or a count with no events that links to a page section. Never a ratio or percentage.",
+      "**Do** pair every state colour with a word, and with a marker shape wherever the state is drawn as a mark.",
+      "**Do** keep superseded stations on the line with a stamp.",
+      "**Do** keep the \"No score\" statement and the limits band visible.",
+      "**Do** label what is observed, rule-derived, re-run or said by the developer with the provenance chips.",
+      "**Do** use the 4px spacing scale and the base type sizes, with the named exceptions only where the build already uses them."
+    ],
+    "donts": [
+      "**Don't** show a score, rank, ratio, percentage, gauge or hire verdict. No verdict on the developer.",
+      "**Don't** add shadows, gradients, blur or rounded cards.",
+      "**Don't** draw route or rule lines at angles other than 0, 45 and 90 degrees.",
+      "**Don't** use cobalt, red, green or amber to edit or soften evidence. Only diff lines carry a red or green tint.",
+      "**Don't** hide the limits or the not-captured list.",
+      "**Don't** use a log list beside a video as the main structure; the line is the structure."
+    ]
+  }
+}
