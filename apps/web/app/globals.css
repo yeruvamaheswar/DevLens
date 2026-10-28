@@ -1935,3 +1935,94 @@ td.mono {
     transition: background-color 160ms cubic-bezier(0.16, 1, 0.3, 1), color 160ms cubic-bezier(0.16, 1, 0.3, 1);
   }
 }
+
+/* Question agent (opt-in). New class names only; every one starts with agent-. */
+.agent-panel {
+  display: grid;
+  gap: var(--s3);
+  justify-items: start;
+  margin-top: var(--s5);
+}
+
+.agent-toggle[aria-pressed="true"] {
+  background: var(--cobalt-tint);
+  border-color: var(--cobalt);
+}
+
+.agent-popup-region {
+  min-height: 0;
+  max-width: 72ch;
+}
+
+.agent-popup {
+  display: grid;
+  gap: var(--s2);
+  background: var(--surface);
+  border: 1.5px solid var(--cobalt);
+  border-left-width: 6px;
+  padding: var(--s3) var(--s4);
+}
+
+.agent-popup-label {
+  font-size: var(--t-cap);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.agent-text {
+  font-size: var(--t-md);
+  max-width: 72ch;
+}
+
+.agent-error {
+  color: var(--red);
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+
+.agent-queue {
+  display: grid;
+  gap: var(--s3);
+  width: 100%;
+  border-top: 2px solid var(--rule-strong);
+  padding-top: var(--s4);
+}
+
+.agent-list {
+  display: grid;
+  gap: var(--s4);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.agent-item {
+  display: grid;
+  gap: var(--s2);
+  max-width: 72ch;
+  border: 1.5px solid var(--rule);
+  background: var(--surface);
+  padding: var(--s3) var(--s4);
+}
+
+.agent-label {
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.agent-field {
+  font: 400 var(--t-base)/1.4 var(--font-sans);
+  color: var(--ink);
+  background: var(--ground);
+  border: 1.5px solid var(--rule-strong);
+  padding: var(--s2);
+  resize: vertical;
+}
+
+.agent-actions {
+  display: flex;
+  gap: var(--s2);
+}

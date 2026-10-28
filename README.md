@@ -41,6 +41,8 @@ Keep keys in the repo-root `.env`. It is ignored by Git. Never paste keys into c
 | `SUPABASE_SECRET_KEY` | Server only. Signs short-lived media links. Never sent to the browser |
 | `DEVLENS_RECORD_ENABLED` | Set to `1` to turn on the upload routes under `/api/recordings`. Off by default |
 | `DEVLENS_OFFLINE` | Set by `npm run demo -- --offline` |
+| `DEVLENS_PROJECT_DIR` | Optional. The folder Claude Code runs in. Needed for the question agent on `/record`. See [Question agent](#question-agent-opt-in) |
+| `ANTHROPIC_API_KEY` | Optional. Switches the question agent from your Claude Code login to the Anthropic API. Read by the agent process only |
 
 Only the Supabase project `hivfaqlabtbrhrviwrrm` is used. The `recordings` bucket is private.
 
@@ -55,6 +57,8 @@ Only the Supabase project `hivfaqlabtbrhrviwrrm` is used. The `recordings` bucke
 | `npm run scenario:verify -- --all-starters` | Checks that every starter fails with a real assertion in a temp copy |
 | `npm run test:replay`, `test:link`, `test:rerun`, `test:sync`, `test:record`, `test:capture` | Unit tests per area |
 | `npm run build && npm run check:bundle` | Builds the app and rejects the server key name in browser assets. `check:bundle` fails if any source file changed after the last build |
+| `npm run test:agent` | Question agent core with fake engines and temp folders. No network |
+| `npm run agent:smoke` | One real `claude -p` call on a synthetic fixture session. Uses your Claude Code login (or `ANTHROPIC_API_KEY`). Prints whether the question was kept or skipped |
 | `npm run test:questions` | Review Questions C1 (post-hackathon, not in the app yet): technology catalog, manifest-diff detector, and question template. Rules only |
 
 Link a session to a recording (writes to Supabase, so it needs the server key; `--dry-run` only counts):
@@ -62,6 +66,28 @@ Link a session to a recording (writes to Supabase, so it needs the server key; `
 ```
 npx tsx packages/cli/src/link.ts <events.jsonl> [--recording <meta.json>] [--rerun <rerun.jsonl>] [--dry-run]
 ```
+
+## Question agent (opt-in)
+
+Off by default. With it off, the Stop hook starts nothing and `/record` shows only one extra control, the `Question agent` toggle.
+
+How it works: after a Claude Code `Stop`, the hook appends its event, then starts `packages/agent/src/cli.ts` in the background. The hook returns at once and prints nothing. The agent may ask at most one question about that task. The question goes into `.devlens/events.jsonl`. `/record` shows it as a pop-up for 10 seconds, then in a queue. You answer or skip later. Each answer or skip is appended as an `answer` event. The agent never scores, ranks, or gives a verdict.
+
+Turn it on:
+
+1. Set `DEVLENS_PROJECT_DIR` in the repo-root `.env` to the same folder Claude Code runs in (its `CLAUDE_PROJECT_DIR`). Restart `next dev`. With it unset, the toggle is disabled and the route writes nothing.
+2. Open `/record` and click `Question agent`. This writes `.devlens/agent.json` as `{ "enabled": true }`. Only that exact value turns it on. A missing file, bad JSON, or `enabled: false` is off.
+
+Engine routes (no retry, no fallback, no tools; at most 30 calls per session, 60 seconds each; model `claude-sonnet-5-5`):
+
+| Route | When | Cost |
+|---|---|---|
+| Claude Code login | Default. Runs `claude -p` with no tools in an empty temp folder | Your Claude subscription |
+| Anthropic API | `ANTHROPIC_API_KEY` is set and not blank | API billing on that key |
+
+If a call fails or times out, no question is asked. The failure goes to `.devlens/agent-ledger.jsonl`. The ledger holds times, route, model, and result. It holds no prompt text.
+
+What leaves the machine: one request per Stop to the engine you chose. It holds the last 200 session events, up to 500 repo file names, and the text of up to 8 touched files and manifests (`package.json`, `requirements.txt`, the first 4 KB of `README.md`). Secret paths (`.env*` except `.env.example`, `*.pem`, `*.key`, `.ssh/`) and files outside the project are never read. The whole prompt passes the capture redactor first.
 
 ## Scenarios
 

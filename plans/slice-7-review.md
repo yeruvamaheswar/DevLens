@@ -1,117 +1,120 @@
-# Slice 7 review (commit d5fc6b5)
+# Slice 7 review — Agent wiring and question queue, off by default
 
-Reviewer: fresh Claude Sonnet 5.5 session. Read-only. This review does not mark the slice VERIFIED. Tech Lead decides.
+Independent review of the Slice 7 diff. This session did not write the product code. No product source was edited. No package was installed. No commit. `apps/web/next-env.d.ts` was ignored.
 
-## Verdict: PASS WITH FINDINGS
+The spec is the Design section in `plans/review-questions-overnight.md`. The "Revised again 2026-10-27" bullets win. The Slice 7 Files and Accept lines are the pass bar. Contract rows: REQ-25, REQ-26, NOT-7, NOT-8, NOT-10, DEC-15, EVAL-25. Earlier design reviews: `plans/agent-design-review.md` and `plans/agent-design-recheck.md`.
 
-All commands pass. The click check passes in both modes. No forbidden verdict content on the replay page. Findings are about labeling precision, accessibility, and exposure policy. None blocks the golden demo.
+Checked files: `git diff` of `packages/capture/hook.ts`, `apps/web/record/page.tsx`, `apps/web/app/globals.css`, `README.md`, `.env.example`, plus `packages/agent/src/cli.ts`, `packages/capture/agent-hook.test.ts`, `apps/web/api/agent/`, `apps/web/app/api/agent/`, `apps/web/record/agent-queue.tsx`, and `apps/web/record/agent-queue.test.ts`.
 
-## 1. Commands (exact output, exit codes)
+`npm run build`, `check:bundle`, and `demo:smoke` were not run. The review task left `.next` to another session.
 
-| Command | Exit | Output |
-|---|---|---|
-| `npm run check` | 0 | `tsc --noEmit`, no output |
-| `npm run test:replay` | 0 | 3 files, 7 tests passed |
-| `npm run demo:smoke` | 0 | PASS: replay fixture / WebM fixture header / Supabase fixture / RLS insert denial / signed private media |
-| `npm run demo:smoke -- --offline` | 0 | PASS: replay fixture / PASS: WebM fixture header / SKIPPED(offline requested): Supabase fixture, RLS insert denial, signed private media |
-| `npm run fixture:verify -- broken-api` | 0 | `PASS` |
-| `npm run test:link` | 0 | 13 tests passed |
-| `npm run test:sync` | 0 | 8 tests passed |
+## Checks
 
-Note: `demo:smoke` does not exercise the page, the `/api/replay` view, or the signed URL playing. The click check below covers that.
+### 1. Thursday demo with the opt-in off
 
-## 2. Browser click check
+`processHook` (`packages/capture/hook.ts:37`) calls `handleHook` and then decides whether to spawn. A temp-dir probe called `handleHook` and `processHook` with the same `now` and compared the `events.jsonl` bytes.
 
-Tool: T3 preview tab, driven with page JavaScript. `preview_snapshot` timed out three times on a hidden tab, so no live screenshot exists. I read the DOM and `video.currentTime`. I extracted the real frames from `session.webm` with ffmpeg.
+The bytes matched for `UserPromptSubmit`, `PreToolUse`, `Edit`, `Bash`, `PostToolUseFailure`, `Stop` with no `agent.json`, `Stop` with `{"enabled": false}`, `Stop` with `{"enabled": "yes"}`, `SessionEnd` with `{"enabled": true}`, and `Stop` with `stop_hook_active: true` and `{"enabled": true}`. `Stop` with `{"enabled": true}` also matched, and the fake spawner was called once. Spawn does not change the stored line.
 
-| Step | `/replay` (supabase) | `/replay?offline=1` (local fixture) |
-|---|---|---|
-| Header label | `golden take, broken-api, 2026-10-27 · supabase` | `... · local fixture` |
-| Video src | signed `hivfaqlabtbrhrviwrrm.supabase.co/storage/v1/object/sign/recordings/...` | `/api/replay/media` |
-| Click "failed test" | `currentTime` 30.446 | 30.446 |
-| Click "passing test" | `currentTime` 177.918 | 177.918 |
-| Decoded frame after seek | 2462x1582, player box 960x617 | same |
-| Status text | `Player time is 30.4 seconds.` then `177.9` | same |
+A real CLI `Stop` with the opt-in off exited 0. Stdout and stderr were empty. The stored event matched `handleHook` on every field except `project_id` and `raw.cwd`, which were the two different temp directories.
 
-- Both modes returned identical `edges`, `claim`, `questions`, `unknowns`, `not_captured`. `events` differ only in `ts` format (`+00:00` vs `Z`).
-- One page shows: failed test with output, "Question and answer" (says no answer captured), later edits, commit diffs (first-fix, final-fix), later failed tests, passing test, separate "Worker re-run" section, rules, 3 questions with event ids, 7 unknowns, 5 not-captured items.
-- The video shows the terminal, not a blank frame. Frames at 30.4 s and 177.9 s (ffmpeg, `/tmp/rv/f30.png`, `/tmp/rv/f177.png`) show the Claude Code window. At 30.4 s the screen shows the prompt and "Fiddle-faddling", not the failing assertion. At 177.9 s it shows "Update(src/client.js)", not the pass. This is the known collapsed-output limit in the golden README. The page does not warn at click time.
+`apps/web/record/page.tsx` adds the `AgentPanel` import and one `<AgentPanel />` between the recorder section and the consent section. Phase words, record buttons, and consent lists are unchanged. `AgentPanelView` (`apps/web/record/agent-queue.tsx:147`) adds the pop-up and the queue only when `phase === 'on'`. Loading, off, and unavailable render the toggle button alone. The idle-phase test in `agent-queue.test.ts` compares that render with the previous `Recorder` HTML plus the toggle. The same component is what the other recorder phases mount, and the page diff has no other markup.
 
-## 3. Honesty and labeling
+New CSS is appended at `apps/web/app/globals.css:1939`. Every new selector starts with `.agent-`. None restyle an existing class.
 
-- No developer question or answer is invented. `answer_note` = "No developer answer was captured in this take." Repeated in Unknowns. PASS.
-- Worker re-run is a separate bordered section, id `sandbox:...`, origin "worker re-run", "No recording offset". It is not merged into the session test line. PASS.
-- Commit diffs are labeled "commit diff, from git, not from the hook log". PASS.
-- "What the model said: not captured in this take." PASS.
-- Questions are labeled "Origin: rule derived, rule-qN-...-v1. No model call." Each cites 3 event ids. PASS.
-- Concerns: see findings F1, F2, F3, F4.
+### 2. Hook
 
-## 4. Forbidden content (NOT-1)
+`DEVLENS_AGENT=1` is handled at `packages/capture/hook.ts:60`, before `readFileSync` of stdin and before `processHook`. A CLI probe with the opt-in file set to `{"enabled": true}` exited 0, stdout was empty, and `.devlens/events.jsonl` was not created.
 
-- Rendered page HTML, `/api/replay`, `/api/replay?offline=1`: regex `score|rank|grade|hire|hiring|verdict|cheat|competen|recommend|suspicious|plagiar|rating|trust` matched nothing. Page HTML is a client shell, so I also read the full `document.body.innerText` in the browser in both modes. None found.
-- `apps/web/**` source: matches only in `apps/web/record/page.tsx:29` (`<li>A score</li>`, a list of things DevLens does not do, on `/record`), and in tests that assert the words are absent. None on the replay page.
-- Only "Nothing here predicts job performance." appears, as required by REQ-10.
+Spawn runs only after the Stop event is appended, and only when both the raw payload and `event.payload.hook_event_name` are `Stop`, `stop_hook_active` is not `true`, and `agent.json` parses with `enabled === true` (`hook.ts:20`, `hook.ts:39`). `SessionEnd` and `stop_hook_active: true` did not spawn. The child is `process.execPath` with the tsx loader and `packages/agent/src/cli.ts`, then `projectDir`, `session_id`, and `event.id`. Options are `{ detached: true, stdio: 'ignore' }`, then `unref()` (`hook.ts:45`). A spawner that throws is caught, one stderr line is reported, and the hook returns the event (`hook.ts:48`). `cli.ts` calls `runAtStop` and exits 0 from `finally`.
 
-## 5. Exposure
+`node node_modules/tsx/dist/cli.mjs` sets `process.argv[1]` to the script, so `cli.ts` reads `projectDir`, `session_id`, and `stop_event_id` from `argv.slice(2)`. The live probe confirms that wiring.
 
-What an anonymous visitor receives from `GET /api/replay` (200, `Cache-Control: no-store`, no auth, about 52 KB):
-- 31 events with payloads (prompts, tool outputs, edits), 32 edges, claim, questions, unknowns, and a signed URL.
-- Keys: grep for `sb_secret`, `sb_publishable`, `service_role`, `apikey`, `password`, emails found none. Only two JWT-like strings, both inside the signed URL token (header and payload).
-- Signed URL token payload, decoded: `{"url":"recordings/d4ce73f0-.../take.webm","scope":"download","iat":1793121896,"exp":1793123696}`. It is scoped to one object, download only, and expires after 1800 s. PASS.
-- Personal data: `/Users` appears 0 times in the API JSON (paths are redacted to `[path]`). The recording footage shows a `/private/var/folders/...` temp path and the terminal title. The author consented.
-- `/api/replay/media` takes no path input. It always reads `goldenFile('session.webm')`. GET results (Range 0-100): `?path=../x` 206, `?path=other/file.webm` 206, `?path=%2e%2e%2fsecret` 206, `?object=x` 206, `?ref=recordings/../../x` 206, all the same golden bytes (query ignored). `/api/replay/media/..%2f..%2fetc` 404. No other object is reachable. PASS.
-- Server uses `SUPABASE_SECRET_KEY` (service role) in `packages/core/server.ts` to read events and sign. The key is not in any response. `page.test.ts` asserts the page source does not name it.
+### 3. Route
 
-## 6. Edge cases (code read; env not changed)
+`projectDirFromEnv` (`apps/web/api/agent/state.ts:16`) reads only `DEVLENS_PROJECT_DIR`. A blank value is unset. The POST body is not used as a path. `applyPost(null, ...)` returns 503 and does not write. POST requires a content type starting with `application/json` (415), an object body, `enabled` as a boolean for `opt_in`, and for `answer` a known `devlens_question` id (404), `action` of `answer` or `skip`, text at most 4000 characters, and no existing `<question_id>:answer` (409).
 
-- Env missing, or Supabase read or signing fails: `loadReplay` catches and returns the local replay with warning "Supabase unavailable; using local golden files." Mode shows `local fixture`. Good, labeled.
-- `?offline=1` never touches Supabase. Page checks `has('offline')`, so `?offline=0` also goes offline in the API call (`offline=1`). Minor.
-- Video load error: `onError` replaces the status line with "Media unavailable. Reload to refresh the short-lived URL." The evidence stays on screen. Good. The signed URL expires after 30 min with no auto refresh.
-- Local `session.webm` missing: `/api/replay/media` throws an unhandled 500; page shows the status message above. Local `meta.json` or `rerun.jsonl` missing: `/api/replay` fails, page shows only "Replay unavailable. Restart the local demo." with no evidence. Not run, read only.
-- Golden event ids must match local ids or Supabase mode silently falls back to local. The fallback is labeled by warning and mode.
+The answer event matches the winning bullet: id `<question_id>:answer`, `actor: 'developer'`, `type: 'answer'`, `source: 'devlens_question'`, `provenance: 'observed'`, null recording fields, and payload `question_id`, `text`, `answered_at`, `delivery`, `actor: 'developer'`, `action`. A skip stores `text: ''`. Delivery is `post_session` when that session has a `SessionEnd` stop, and `live` otherwise (`state.ts:103`).
 
-## 7. Accessibility
+A temp probe posted an answer containing `ANTHROPIC_API_KEY`'s value. Status was 200. The events file contained `[REDACTED]` and did not contain the value.
 
-- Both claim buttons are `<button type="button">`. Programmatic `focus()` works and `click()` seeks. Real Tab and Enter keys NOT tested (preview tool cannot do it reliably).
-- Status: `<p role="status">` announces seek updates. PASS.
-- State does not depend on color. PASS.
-- `<video>` has no `aria-label` or `title`. FAIL (F5).
+`apps/web/record/page.tsx` and `apps/web/record/agent-queue.tsx` do not read `process.env` and do not name `SUPABASE_SECRET_KEY` or `ANTHROPIC_API_KEY`. The route module is imported by `apps/web/app/api/agent/route.ts` (a server route) and by the Vitest file. It is not imported by a client component. `check:bundle` was not run.
 
-## Findings
+### 4. UI
 
-| # | Sev | Where | Observed | Reproduce | Recommendation |
-|---|---|---|---|---|---|
-| F1 | Medium | `apps/web/replay/view.ts` `commitGroups` | The first-fix and final-fix diffs are paired to edit events by session order (`later[Math.min(index, ...)]`). The page prints "Event ids: ..." under each commit as if recorded. The pairing is an inference, and the README says the commits were made outside the sessions. | Read page text under each diff. | Label it "paired by session order, inferred" or drop the event-id line. |
-| F2 | Medium | `/api/replay` `edges[].provenance`; page "Rules" | Rule edges `supersedes` and `verifies` (rule-5) show `observed`, next to "What a rule derived". A rule-derived link is shown as observed. Only `failed` shows `inferred`. This is the linker's value (slice 5), but the page repeats it without explanation. | `curl localhost:3000/api/replay`, read `claim.rules`. | Show "rule derived, observed evidence" wording, or explain the term on the page. |
-| F3 | Low | `apps/web/questions.ts:94` (Q3) | Q3 says "A file changed with no hooked event. Call it unattributed", while Unknowns says "no file-edit event is unattributed", and the cited ids are hooked edits. Q2 and Q3 are statements, not questions. | Read Questions and Unknowns. | Rewrite as questions. Remove the "unattributed" contradiction. |
-| F4 | Low | `/replay` after click | Seek lands on the terminal, but at 30.4 s and 177.9 s the failing and passing output is not on screen. | Click either button, look at the frame. | Add one line: "Output may be collapsed on screen. The log text below is the evidence." |
-| F5 | Low | `apps/web/replay/page.tsx` `<video>` | No accessible name. | Inspect video attributes. | Add `aria-label="Recording of the Claude Code terminal"`. |
-| F6 | Medium (policy) | `GET /api/replay` | No auth, no rate limit. Any visitor can mint a 30-min signed link to the private recording and read all event payloads. The bucket stays private, but the page makes it public in effect. The author consented. | `curl localhost:3000/api/replay`, open `media.url`. | Tech Lead and Uma decide whether public exposure is accepted for the demo. Record it. Shorten the expiry if possible. |
-| F7 | Low | `apps/web/api/replay/media/route.ts` | Reads the whole file per request, no try/catch. | Read code. | Optional for a demo. |
-| F8 | Low | `page.tsx` effect | `?offline=0` is treated as offline. | Load `/replay?offline=0`. | Check the value. |
+The pop-up is a `div` in normal flow (`agent-queue.tsx:160`, CSS at `globals.css:1957`). There is no dialog, no `aria-modal`, and no focus call or `autoFocus`. The region is `role="status"` and `aria-live="polite"`, and it is mounted while the opt-in is on before a later question fills it. `POPUP_MS` is 10000 (`agent-queue.tsx:13`). Clearing `popupId` puts the item in the queue. The toggle, the queue section, the answer field, and the Answer and Skip buttons have accessible names. `startPolling` runs only after a successful load with `enabled: true` (`agent-queue.tsx:86`). Off and unavailable clear the interval.
 
-## Slice 7 accept criteria
+The queue stores `asked_at` and the answer's `answered_at` and `delivery` on the event. The list does not render those words. The winning event-mapping bullet requires them on the payload, and `state.ts:104` writes them.
 
-- Click seeks the real WebM: PASS (30.446 s and 177.918 s, both modes, decoded 2462x1582).
-- Shows failure: PASS.
-- Shows answer: PASS (honestly reports none captured, no invention).
-- Shows later edit: PASS (3 edits plus 2 commit diffs; see F1).
-- Shows pass: PASS.
-- Shows separate re-run: PASS.
-- Three questions cite ids: PASS (3 each; see F3 for wording).
-- Unknowns visible: PASS.
-- Not-captured limits visible: PASS.
-- Supabase and offline show same chain: PASS (identical claim, edges, questions, unknowns).
-- Correct labels: PASS WITH FINDINGS (mode label and warning differ correctly; F1, F2).
-- Verify: test:replay, demo:smoke, demo:smoke --offline: PASS.
-- Forbidden verdict search: PASS.
-- Fresh reviewer claim click: PASS (page JS, not a screenshot).
+### 5. Live probe
 
-## Not checked
+Temp project: `/var/folders/c4/zd_gcgn532105p93s62s1cvh0000gn/T/devlens-slice7-probe-78ql2v`. Outside the repo. `.devlens/agent.json` was `{"enabled": true}`. `events.jsonl` had one prompt and one `file_edit` for session `sess-probe`, plus `src/orders.js`. The repo had no `.devlens` directory. The shell had no `ANTHROPIC_API_KEY`.
 
-- A live browser screenshot (tool timed out).
-- Real Tab and Enter keyboard events.
-- `npm run demo` itself, a second launch with env missing, a failing signed URL, and URL expiry after 30 minutes.
-- Playback of the full video at normal speed.
-- Supabase RLS or the bucket policy directly (no Supabase access used).
-- A narrow viewport or mobile layout.
+Command: `npx --no-install tsx packages/capture/hook.ts` with `CLAUDE_PROJECT_DIR` set to that temp folder and stdin a `Stop` payload for `sess-probe` (`stop_hook_active: false`). `--no-install` used the repo's tsx and did not install a package.
+
+The hook exited 0 in 985 ms. Stdout was empty. Stderr was empty. About 6 s after that exit, `events.jsonl` had types `prompt`, `file_edit`, `stop`, `question`. The question:
+
+- id `sess-probe:devlens_question:sess-probe:Stop:p1`
+- actor `tool`, source `devlens_question`, provenance `inferred`
+- `recording_ref` null, `media_offset_ms` null
+- cites `sess-probe:UserPromptSubmit:p1` and `sess-probe:tu2:post`
+- route `claude_cli`, model `claude-sonnet-5-5`
+- text: "You asked for an empty list on an empty cart, and the edit added `return []`. But orderTotal in src/orders.js now returns 0. How did you decide between a list and a number for the empty case?"
+
+The ledger has a `reserved` line, then a `result` line with `ok: true`, `route: claude_cli`, `duration_ms: 4906`. No prompt text. One `claude -p` call. The hook had already exited.
+
+## Minor
+
+### 1. A failed `spawn` of `node` itself exits 1
+
+`packages/capture/hook.ts:45`. The `try/catch` at `hook.ts:48` handles a synchronous throw. `child_process.spawn` reports a failure to start the executable with an `error` event, and this call does not listen for it. Node then prints a stack and exits 1.
+
+Reproduced outside the hook with `spawn('/nonexistent/devlens-hook-bin', ...)` using `{ detached: true, stdio: 'ignore' }` and `unref()`. Exit code was 1. The same options with `process.execPath` and a missing script exited 0: Node starts, and the missing script fails in the child. The hook spawns `process.execPath`, so a missing `tsx` file takes that second path. The opt-in-off path never calls `spawn`.
+
+Failure: `spawn(process.execPath)` fails with `EMFILE` or a bad `execPath` while the opt-in is on. The Stop hook prints a stack and exits 1.
+
+### 2. A failed first GET mislabels the toggle and does not retry
+
+`apps/web/record/agent-queue.tsx:72`. The `catch` sets `error` and returns. `phase` stays `loading`, and `startPolling` is not reached. `toggleLabel` (`agent-queue.tsx:131`) treats that error as `Question agent: Off (could not save the setting)`. The alert text is rendered only when `phase === 'on'` (`agent-queue.tsx:165`), so the "will try again" sentence is not shown. A later successful poll does retry once the interval is running.
+
+Failure: `/api/agent` is down on the first load. The toggle says the setting could not be saved. The page does not poll until reload.
+
+## Commands
+
+`npm run -s check` exited 0 and printed nothing. `tsc --noEmit` is quiet on success. The later commands ran, so the `&&` chain had passed `check`.
+
+`npm run -s test:capture`
+
+```
+ Test Files  2 passed (2)
+      Tests  30 passed (30)
+   Duration  923ms
+```
+
+`npm run -s test:record`
+
+```
+ Test Files  7 passed (7)
+      Tests  45 passed (45)
+   Duration  452ms
+```
+
+`npm run -s test:replay`
+
+```
+ Test Files  4 passed (4)
+      Tests  21 passed (21)
+   Duration  228ms
+```
+
+`npm run -s test:agent`
+
+```
+ Test Files  1 passed (1)
+      Tests  57 passed (57)
+   Duration  4.95s
+```
+
+The combined command exited 0.
+
+Verdict: PASS

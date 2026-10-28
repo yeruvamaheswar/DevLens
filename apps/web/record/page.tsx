@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { TopBar } from '../ui/topbar';
+import { AgentPanel } from './agent-queue';
 import { browserDeps } from './browser';
 import { createRecorderSession, type RecorderPhase, type RecorderSession, type RecorderSnapshot } from './session';
 
@@ -88,6 +89,7 @@ export function Recorder({ session }: { session: RecorderSession }) {
             </div>
           ) : null}
         </section>
+        <AgentPanel />
         <section id="consent" aria-label="Consent" className="consent">
           <div>
             <h2>Captured</h2>
