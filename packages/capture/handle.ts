@@ -2,7 +2,7 @@ import path from 'node:path';
 import type { Event } from '../core/event';
 import { appendEvent } from './append-event';
 import { mapHook, type HookInput } from './map-hook';
-import { redactStreamPair, redactValue, secretValuesFromEnv, shortSecretValuesFromEnv } from './redact';
+import { redactStreamPair, redactString, redactValue, secretValuesFromEnv, shortSecretValuesFromEnv } from './redact';
 
 function isRecord(value: unknown): value is HookInput {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -35,13 +35,35 @@ function maskSplitStreams(input: HookInput, secrets: readonly string[], shorts: 
   return { ...input, tool_response: { ...response, stdout: stdoutTail, stderr: stderrHead } };
 }
 
+const EDIT_TEXT_KEYS = ['old_string', 'new_string', 'oldString', 'newString', 'content'] as const;
+
+function redactEditFields(record: Record<string, unknown>, secrets: readonly string[], shorts: readonly string[]): Record<string, unknown> {
+  const out = { ...record };
+  for (const key of EDIT_TEXT_KEYS) {
+    if (typeof out[key] === 'string') out[key] = redactString(out[key], secrets, shorts);
+  }
+  return out;
+}
+
+// mapHook signs each diff line, which would split a multi-line secret. Redact only the edit text first.
+// Do not redact command or output: test classification reads them.
+function redactEditText(input: HookInput, secrets: readonly string[], shorts: readonly string[]): HookInput {
+  if (!isRecord(input.tool_input)) return input;
+  const toolInput = redactEditFields(input.tool_input, secrets, shorts);
+  if (Array.isArray(toolInput.edits)) {
+    toolInput.edits = toolInput.edits.map((edit) => (isRecord(edit) ? redactEditFields(edit, secrets, shorts) : edit));
+  }
+  return { ...input, tool_input: toolInput };
+}
+
 export function handleHook(input: unknown, options: { eventsPath?: string; env?: Record<string, string | undefined>; now?: Date } = {}): Event | null {
   if (!isRecord(input)) return null;
   const env = options.env ?? process.env;
   const secrets = secretValuesFromEnv(env);
   const shorts = shortSecretValuesFromEnv(env);
   const projectDir = projectDirFrom(input, env);
-  const mapped = mapHook(maskSplitStreams(input, secrets, shorts), stampTs(options.now), projectIdFromDir(projectDir));
+  const clean = redactEditText(maskSplitStreams(input, secrets, shorts), secrets, shorts);
+  const mapped = mapHook(clean, stampTs(options.now), projectIdFromDir(projectDir));
   if (!mapped) return null;
   const redacted = redactValue(mapped, secrets, shorts);
   return appendEvent(options.eventsPath ?? eventsPathFor(projectDir), redacted);

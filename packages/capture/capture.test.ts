@@ -5,7 +5,7 @@ import { tmpdir, homedir } from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { handleHook } from './handle';
-import { testStatusFromOutput } from './map-hook';
+import { mapHook, testStatusFromOutput } from './map-hook';
 import { redactString } from './redact';
 import { CONSENT_NOTICE, HOOK_EVENTS, init, isDevlensHandler } from '../cli/src/init';
 
@@ -193,6 +193,68 @@ describe('hook mapping', () => {
     expect(stop).toMatchObject({ id: 'ses_1:Stop:p1', type: 'stop', seq: 4 });
     expect(end?.payload.hook_event_name).toBe('SessionEnd');
     expect(end?.id).toBe('ses_1:SessionEnd:p1');
+  });
+
+  it('marks every line of a multi-line edit diff with + or -', () => {
+    const base = { hook_event_name: 'PostToolUse', session_id: 'ses_1', tool_name: 'Edit', tool_use_id: 't1', cwd: '/tmp' };
+    const edit = mapHook({ ...base, tool_input: { file_path: 'a.js', old_string: 'one\ntwo', new_string: 'x\ny\nz' } }, now.toISOString(), 'p');
+    expect(edit?.payload.diff).toBe('-one\n-two\n+x\n+y\n+z');
+    const multi = mapHook({ ...base, tool_name: 'MultiEdit', tool_input: { file_path: 'a.js', edits: [{ old_string: 'a', new_string: 'b\nc' }] } }, now.toISOString(), 'p');
+    expect(multi?.payload.diff).toBe('-a\n+b\n+c');
+    const write = mapHook({ ...base, tool_name: 'Write', tool_input: { file_path: 'a.js', content: 'p\nq\nr' } }, now.toISOString(), 'p');
+    expect(write?.payload.diff).toBe('+p\n+q\n+r');
+    const big = mapHook({ ...base, tool_input: { file_path: 'a.js', old_string: 'a', new_string: 'b'.repeat(4000) } }, now.toISOString(), 'p');
+    expect(big?.payload.diff).toBeUndefined();
+  });
+
+  it('does not sign a trailing newline as an empty line', () => {
+    const base = { hook_event_name: 'PostToolUse', session_id: 'ses_1', tool_name: 'Edit', tool_use_id: 't1', cwd: '/tmp' };
+    const edit = mapHook({ ...base, tool_input: { file_path: 'a.js', old_string: 'o\n', new_string: 'p\nq\n' } }, now.toISOString(), 'p');
+    expect(edit?.payload.diff).toBe('-o\n+p\n+q');
+  });
+
+  it('redacts a multi-line env secret inside a signed diff', () => {
+    const dir = tempDir();
+    const eventsPath = path.join(dir, 'events.jsonl');
+    const secret = 'multiline-secret-AAAA\nmultiline-secret-BBBB';
+    const event = handleHook({
+      hook_event_name: 'PostToolUse', session_id: 'ses_1', tool_name: 'Edit', tool_use_id: 't9', cwd: dir,
+      tool_input: { file_path: 'a.js', old_string: 'x', new_string: `k = ${secret}\nrest` },
+    }, { eventsPath, now, env: { SUPABASE_SECRET_KEY: secret } });
+    const text = readFileSync(eventsPath, 'utf8');
+    expect(text).not.toContain('multiline-secret-AAAA');
+    expect(text).not.toContain('multiline-secret-BBBB');
+    expect(String(event?.payload.diff)).toContain('[REDACTED]');
+  });
+
+  it('redacts a short multi-line env secret in Edit, MultiEdit and Write text', () => {
+    const dir = tempDir();
+    const eventsPath = path.join(dir, 'events.jsonl');
+    const env = { MY_API_KEY: 'ab\ncd' }; // 5 characters: a short secret (4 to 7), not a long one
+    const base = { hook_event_name: 'PostToolUse', session_id: 'ses_1', cwd: dir };
+    const events = [
+      handleHook({ ...base, tool_name: 'Edit', tool_use_id: 's1', tool_input: { file_path: 'a.js', old_string: 'x', new_string: 'k=ab\ncd' } }, { eventsPath, now, env }),
+      handleHook({ ...base, tool_name: 'Edit', tool_use_id: 's2', tool_input: { file_path: 'a.js', old_string: 'k=ab\ncd', new_string: 'y' } }, { eventsPath, now, env }),
+      handleHook({ ...base, tool_name: 'MultiEdit', tool_use_id: 's3', tool_input: { file_path: 'a.js', edits: [{ old_string: 'x', new_string: 'ab\ncd' }] } }, { eventsPath, now, env }),
+      handleHook({ ...base, tool_name: 'Write', tool_use_id: 's4', tool_input: { file_path: 'a.js', content: 'v=ab\ncd' } }, { eventsPath, now, env }),
+    ];
+    for (const event of events) {
+      const diff = String(event?.payload.diff);
+      expect(diff).toContain('[REDACTED]');
+      expect(diff).not.toMatch(/^[+-].*\bab$/m);
+      expect(diff).not.toMatch(/^[+-]cd\b/m);
+    }
+  });
+
+  it('keeps test classification when an env value is a common word', () => {
+    const dir = tempDir();
+    const eventsPath = path.join(dir, 'events.jsonl');
+    const run = (id: string, env: Record<string, string>) => handleHook({
+      hook_event_name: 'PostToolUse', session_id: 'ses_1', tool_name: 'Bash', tool_use_id: id, cwd: dir,
+      tool_input: { command: 'npm test' }, tool_response: { stdout: '✔ adds\nℹ pass 1\nℹ fail 0', stderr: '' },
+    }, { eventsPath, now, env });
+    expect(run('r1', { MY_API_KEY: 'test' })).toMatchObject({ type: 'test', payload: { status: 'passed' } });
+    expect(run('r2', { MY_PASSWORD: 'pass' })).toMatchObject({ type: 'test', payload: { status: 'passed' } });
   });
 
   it('classifies test hooks without inventing an exit code', () => {

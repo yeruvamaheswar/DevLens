@@ -66,8 +66,11 @@ function filePaths(input: HookInput): string[] {
 function hunk(record: Record<string, unknown>): string | null {
   const oldText = pickString(record, ['old_string', 'oldString']);
   const newText = pickString(record, ['new_string', 'newString']);
-  if (oldText === null || newText === null) return null;
-  return `- ${oldText}\n+ ${newText}`;
+  const prefixed = (text: string, mark: '+' | '-') => (text.endsWith('\n') ? text.slice(0, -1) : text).split('\n').map((line) => `${mark}${line}`).join('\n');
+  if (oldText !== null && newText !== null) return `${prefixed(oldText, '-')}\n${prefixed(newText, '+')}`;
+  // Write tool: no old text, so every line is an addition.
+  const content = pickString(record, ['content']);
+  return content !== null && oldText === null && newText === null ? prefixed(content, '+') : null;
 }
 
 function editDiff(input: HookInput): string | undefined {
