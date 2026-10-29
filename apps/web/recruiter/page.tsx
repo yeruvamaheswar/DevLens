@@ -115,7 +115,7 @@ export default function RecruiterPage() {
         <section className={`band ${styles.head}`}>
           <h1 className={styles.title}>Recruiter view</h1>
           <p className={styles.project}>{state?.project ?? ' '}</p>
-          <p className={styles.statement}>Facts from the session log. No score, rank, or verdict.</p>
+          <p className={styles.statement}>The developer's prompts, word for word, and facts from the session log. No score, rank, or verdict.</p>
           <div className={styles.actions}>
             <button type="button" className="btn btn--primary" onClick={() => void requestStatus()} disabled={!sharing || sending}>
               {sending ? 'Requesting…' : 'Request status'}
