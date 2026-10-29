@@ -26,7 +26,10 @@
     "test:widget": "vitest run apps/web/agent",
     "test:recruiter": "vitest run packages/recruiter",
     "widget:build": "mkdir -p .build && swiftc -O apps/widget/DevLensWidget.swift -o .build/devlens-widget",
-    "widget": "npm run -s widget:build && .build/devlens-widget"
+    "widget": "npm run -s widget:build && .build/devlens-widget",
+    "test:t3": "vitest run packages/t3",
+    "test:journey": "vitest run apps/web/journey",
+    "t3": "tsx packages/t3/src/cli.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0",

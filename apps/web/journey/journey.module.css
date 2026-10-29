@@ -1,0 +1,396 @@
+/* Development journey: one metro line, rows joined by U-turns. Flat colour, ink rules, no shadows. */
+
+.line {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-width: 860px;
+}
+
+.line text {
+  font-family: var(--font-sans);
+  fill: var(--ink);
+}
+
+.lnMain,
+.lnChain,
+.lnBranch {
+  fill: none;
+  stroke-linejoin: round;
+  stroke-linecap: butt;
+}
+
+.lnMain {
+  stroke: var(--cobalt);
+  stroke-width: 5;
+  opacity: 0.55;
+}
+
+.lnChain {
+  stroke: var(--cobalt);
+  stroke-width: 12;
+}
+
+.lnBranch {
+  stroke: var(--amber);
+  stroke-width: 5;
+  stroke-dasharray: 10 5;
+}
+
+.line[data-chain-only='true'] .lnMain {
+  opacity: 0.25;
+}
+
+.st[data-dim='true'] {
+  opacity: 0.3;
+}
+
+.title {
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.st[data-kind='test_passed'] .title,
+.st[data-kind='verified'] .title {
+  font-size: 13.5px;
+}
+
+.st[data-derived='true'] .title {
+  font-style: italic;
+}
+
+.detail {
+  font-size: 11.5px;
+  fill: var(--muted) !important;
+}
+
+.time {
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.stamp {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  fill: var(--muted) !important;
+}
+
+.mkStart circle {
+  fill: var(--station-fill);
+  stroke: var(--ink);
+  stroke-width: 4;
+}
+
+.mkStart .mkStartDot {
+  fill: var(--ink);
+  stroke: none;
+}
+
+.mkResponse rect,
+.mkResponse path,
+.mkResponseKey {
+  fill: var(--cobalt);
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+
+.mkAgentPrompt {
+  fill: var(--station-fill);
+  stroke: var(--muted);
+  stroke-width: 3;
+  stroke-dasharray: 4 3;
+}
+
+.mkActions {
+  fill: var(--muted);
+  stroke: var(--station-fill);
+  stroke-width: 3;
+}
+
+.mkUnattributed rect {
+  fill: var(--station-fill);
+  stroke: var(--muted);
+  stroke-width: 2.5;
+  stroke-dasharray: 3 2;
+}
+
+.mkUnattributed text {
+  font-size: 11px;
+  font-weight: 700;
+  fill: var(--muted) !important;
+}
+
+.mkSwitch circle {
+  fill: var(--station-fill);
+  stroke: var(--ink);
+  stroke-width: 3;
+}
+
+.mkSwitch path {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.8;
+}
+
+.mkAnswer {
+  fill: var(--station-fill);
+  stroke: var(--green);
+  stroke-width: 3.5;
+}
+
+.mkRerun rect {
+  fill: var(--station-fill);
+  stroke: var(--amber);
+  stroke-width: 4.5;
+}
+
+.mkRerun path {
+  fill: none;
+  stroke: var(--amber);
+  stroke-width: 2.6;
+}
+
+.legend {
+  list-style: none;
+  padding: 0;
+  margin: var(--s2) 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s1) var(--s4);
+  font-size: var(--t-sm);
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.keyChain,
+.keyBranch {
+  display: inline-block;
+  width: 30px;
+}
+
+.keyChain {
+  height: 12px;
+  background: var(--cobalt);
+}
+
+.keyBranch {
+  height: 0;
+  border-top: 5px dashed var(--amber);
+}
+
+.chain {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0;
+  border-top: 2px solid var(--rule-strong);
+}
+
+.chainStep {
+  position: relative;
+  display: flex;
+  gap: var(--s2);
+  padding: var(--s3) var(--s2) var(--s3) 0;
+  border-right: 1px solid var(--rule);
+}
+
+.chainStep:last-child {
+  border-right: 0;
+}
+
+.chainNo {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  font: 700 11px/1 var(--font-sans);
+  border: 2px solid var(--ink);
+  margin-left: var(--s2);
+}
+
+.chainStep[data-missing='true'] .chainNo {
+  border-style: dashed;
+  color: var(--muted);
+  border-color: var(--muted);
+}
+
+.chainStep[data-selected='true'] .chainNo {
+  background: var(--ink);
+  color: var(--ground);
+}
+
+.chainButton {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+button.chainButton {
+  cursor: pointer;
+}
+
+button.chainButton:hover b,
+button.chainButton:focus-visible b {
+  text-decoration: underline;
+}
+
+button.chainButton:focus-visible {
+  outline: 2px dashed var(--cobalt);
+  outline-offset: 3px;
+}
+
+.chainButton b {
+  font-size: var(--t-sm);
+}
+
+.chainButton span {
+  font-size: 11.5px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.chainStep[data-missing='true'] b {
+  color: var(--muted);
+}
+
+.evidence {
+  display: grid;
+  gap: var(--s3);
+  align-content: start;
+  min-width: 0;
+}
+
+.basis {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.seekRow {
+  display: flex;
+  gap: var(--s2);
+  align-items: center;
+}
+
+.derived {
+  display: flex;
+  gap: var(--s2);
+  align-items: baseline;
+  font-size: var(--t-sm);
+  color: var(--muted);
+  margin: 0;
+}
+
+.card {
+  border-top: 1px solid var(--rule);
+  padding-top: var(--s3);
+  display: grid;
+  gap: var(--s2);
+  min-width: 0;
+}
+
+.card pre {
+  max-height: 260px;
+  overflow: auto;
+}
+
+.prompt {
+  margin: 0;
+  padding: var(--s3) var(--s4);
+  border-left: 4px solid var(--cobalt);
+  background: var(--surface);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: var(--t-base);
+  max-height: 220px;
+  overflow: auto;
+}
+
+.cmd {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  align-items: baseline;
+  overflow-wrap: anywhere;
+}
+
+.cmd code {
+  font-family: var(--font-mono);
+  font-size: var(--t-sm);
+}
+
+.files {
+  margin: 0;
+  padding-left: var(--s4);
+  font-size: var(--t-sm);
+}
+
+.ids {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px var(--s3);
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.ids dt {
+  font-weight: 700;
+}
+
+.ids dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.ids code {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.context summary {
+  cursor: pointer;
+  font-size: var(--t-sm);
+  font-weight: 700;
+}
+
+.rules ul {
+  margin: 0;
+  padding-left: var(--s4);
+  font-size: var(--t-sm);
+  display: grid;
+  gap: 4px;
+}
+
+.prov {
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid var(--rule);
+  padding: 1px 5px;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
+.prov[data-prov='inferred'] {
+  border-style: dashed;
+}
+
+@media (max-width: 1100px) {
+  .chain {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

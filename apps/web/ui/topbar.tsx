@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 
-type Place = 'home' | 'replay' | 'record';
+type Place = 'home' | 'replay' | 'record' | 'recruiter';
 
 function Wordmark() {
   return (
@@ -28,6 +28,7 @@ export function TopBar({ place, take }: { place: Place; take?: ReactNode }) {
       <nav aria-label="Main">
         {link('replay', '/replay', 'Replay')}
         {link('record', '/record', 'Record')}
+        {link('recruiter', '/recruiter', 'Recruiter')}
         <span className="nav-later" title="The scenario catalog is not built yet">
           Scenarios <small>later</small>
         </span>

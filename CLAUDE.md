@@ -36,7 +36,7 @@ These are defaults. The Tech Lead picks the model per task and records the reaso
 - Keep keys out of chat, logs, docs, and Git. `.env` stays local and ignored.
 - Use only the Supabase project `devlens` (ref `hivfaqlabtbrhrviwrrm`). Do not touch other projects.
 - Do not edit files outside your slice's Files list.
-- Product limits: no score, rank, or hire verdict. Claude Code is the only capture adapter. Screen recording needs explicit consent, with audio and camera off.
+- Product limits: no score, rank, or hire verdict. Claude Code hooks are the only verified capture adapter; the T3 Code adapter (CR-11) is experimental and read-only. Screen recording needs explicit consent, with audio and camera off.
 
 ## Slice states
 PLANNED, READY, IN_PROGRESS, BLOCKED, REVIEW, VERIFIED. A slice is VERIFIED only with recorded evidence from a different session.

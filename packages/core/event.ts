@@ -1,8 +1,9 @@
 export type Event = {
   id: string; session_id: string; project_id: string; ts: string; seq: number;
   actor: 'developer' | 'agent' | 'tool' | 'ci' | 'unknown';
-  type: 'prompt' | 'tool_call' | 'file_edit' | 'test' | 'question' | 'answer' | 'recording_start' | 'pause' | 'resume' | 'stop';
-  source: 'claude_code_hook' | 'git' | 'sandbox' | 'devlens_question' | 'media_recorder';
+  type: 'prompt' | 'tool_call' | 'file_edit' | 'test' | 'question' | 'answer' | 'recording_start' | 'pause' | 'resume' | 'stop' | 'checkpoint';
+  // t3_code: read from the T3 Code server's local store by packages/t3 (experimental adapter).
+  source: 'claude_code_hook' | 'git' | 'sandbox' | 'devlens_question' | 'media_recorder' | 't3_code';
   provenance: 'observed' | 'inferred'; recording_ref: string | null;
   media_offset_ms: number | null; tool_use_id?: string | null; payload: Record<string, unknown>;
 };
@@ -24,7 +25,7 @@ export type Replay = {
 export type TestPayload = {
   status: 'passed' | 'failed' | 'unknown';
   command: string; output: string; files?: string[];
-  signal: 'hook_failure' | 'output_parse' | 'rerun'; // how status was decided
+  signal: 'hook_failure' | 'output_parse' | 'rerun' | 'provider_status'; // how status was decided
   patch_event_id?: string; prompt_id?: string; duration_ms?: number; rerun_of?: string;
 };
 export type FileEditPayload = { files: string[]; diff?: string; tool_name?: string; attribution?: 'unattributed' };

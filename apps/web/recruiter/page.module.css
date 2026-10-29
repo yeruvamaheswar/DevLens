@@ -149,3 +149,247 @@
 .none {
   color: var(--muted);
 }
+
+/* ---- Development journey (provider-neutral: Claude Code hooks or the T3 Code adapter) ---- */
+
+.journey {
+  display: grid;
+  gap: var(--s4);
+  padding: var(--s5) 0 var(--s6);
+  border-bottom: 2px solid var(--rule-strong);
+}
+
+.journeyHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s3);
+}
+
+.journeyHead h2 {
+  font-size: var(--t-lg);
+  font-weight: 800;
+}
+
+.sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+.source {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  font: 600 var(--t-sm) / 1.2 var(--font-sans);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1.5px solid var(--rule);
+  padding: 7px 10px;
+  cursor: pointer;
+  max-width: 460px;
+  text-align: left;
+}
+
+.source[data-active='true'] {
+  border-color: var(--ink);
+  box-shadow: inset 0 -3px 0 var(--cobalt);
+}
+
+.source:focus-visible {
+  outline: 2px dashed var(--cobalt);
+  outline-offset: 2px;
+}
+
+.sourceStatus {
+  flex: none;
+  font-size: 10.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 5px;
+  border: 1.5px solid var(--green);
+  color: var(--green);
+}
+
+.sourceStatus[data-status='experimental'] {
+  border-color: var(--amber);
+  border-style: dashed;
+  color: var(--amber-ink);
+}
+
+.provenance {
+  font-size: var(--t-sm);
+  color: var(--muted);
+  max-width: 110ch;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr)) minmax(0, 2.4fr);
+  gap: 0;
+  margin: 0;
+  border-top: 1px solid var(--rule);
+  border-bottom: 1px solid var(--rule);
+}
+
+.facts > div {
+  padding: var(--s2) var(--s3) var(--s2) 0;
+  border-right: 1px solid var(--rule);
+  margin-right: var(--s3);
+}
+
+.facts > div:last-child {
+  border-right: 0;
+}
+
+.facts dt {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.facts dd {
+  margin: 2px 0 0;
+  font-size: var(--t-md);
+  font-weight: 700;
+}
+
+.factWide dd {
+  font-size: var(--t-sm);
+}
+
+.lineWrap {
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.lineFoot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s2) var(--s5);
+}
+
+.toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.lineNote {
+  font-size: var(--t-sm);
+  color: var(--muted);
+}
+
+.lower {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 1fr);
+  gap: var(--s6);
+  align-items: start;
+  padding-top: var(--s3);
+}
+
+.player {
+  position: sticky;
+  top: var(--s4);
+  display: grid;
+  gap: var(--s2);
+}
+
+.videoFrame {
+  position: relative;
+  background: #000;
+  border: 1px solid var(--rule);
+}
+
+.video {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 10;
+}
+
+.videoTag {
+  position: absolute;
+  top: var(--s2);
+  right: var(--s2);
+  z-index: 1;
+  font: 700 10.5px/1 var(--font-sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: var(--band);
+  color: var(--band-ink);
+  padding: 5px 7px;
+}
+
+.questions ol {
+  display: grid;
+  gap: var(--s3);
+  padding-left: var(--s5);
+}
+
+.questions h3,
+.limits h3 {
+  font-size: var(--t-md);
+  font-weight: 800;
+  margin-bottom: var(--s1);
+}
+
+.qText {
+  font-weight: 600;
+}
+
+.qAnswer {
+  font-size: var(--t-sm);
+  margin-top: 4px;
+}
+
+.qCites {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px var(--s2);
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.limits {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: var(--s6);
+  font-size: var(--t-sm);
+}
+
+.limits ul {
+  padding-left: var(--s4);
+  display: grid;
+  gap: 3px;
+}
+
+.liveHead {
+  padding-top: var(--s5);
+  display: grid;
+  gap: var(--s2);
+}
+
+.liveHead h2 {
+  font-size: var(--t-lg);
+  font-weight: 800;
+}
+
+@media (max-width: 1100px) {
+  .facts {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .lower,
+  .limits {
+    grid-template-columns: 1fr;
+  }
+  .player {
+    position: static;
+  }
+}

@@ -60,6 +60,9 @@ Only the Supabase project `hivfaqlabtbrhrviwrrm` is used. The `recordings` bucke
 | `npm run test:agent` | Question agent core with fake engines and temp folders. No network |
 | `npm run agent:smoke` | One real `claude -p` call on a synthetic fixture session. Uses your Claude Code login (or `ANTHROPIC_API_KEY`). Prints whether the question was kept or skipped |
 | `npm run test:questions` | Review Questions C1 (post-hackathon, not in the app yet): technology catalog, manifest-diff detector, and question template. Rules only |
+| `npm run test:journey` | Recruiter journey: stations, failure-to-fix chain, questions, and line layout over the golden take and synthetic events |
+| `npm run test:t3` | T3 Code adapter (experimental): mapping, diff shapes, and the read-only store on a temp database |
+| `npm run t3 -- list` / `import` / `verify` | T3 Code adapter commands. See [packages/t3/README.md](packages/t3/README.md) |
 
 Link a session to a recording (writes to Supabase, so it needs the server key; `--dry-run` only counts):
 
@@ -88,6 +91,24 @@ Engine routes (no retry, no fallback, no tools; at most 30 calls per session, 60
 If a call fails or times out, no question is asked. The failure goes to `.devlens/agent-ledger.jsonl`. The ledger holds times, route, model, and result. It holds no prompt text.
 
 What leaves the machine: one request per Stop to the engine you chose. It holds the last 200 session events, up to 500 repo file names, and the text of up to 8 touched files and manifests (`package.json`, `requirements.txt`, the first 4 KB of `README.md`). Secret paths (`.env*` except `.env.example`, `*.pem`, `*.key`, `.ssh/`) and files outside the project are never read. The whole prompt passes the capture redactor first.
+
+## Recruiter journey
+
+`/recruiter` opens with the development journey: a train line of the session's recorded events, in time order. Stations are prompts, grouped agent actions, code changes, test results, model switches, and unattributed changes. The separate re-run leaves the line as a branch. A click opens the evidence: the prompt word for word, the command and its output, the diff, the git checkpoint, the rule links with observed or inferred labels, and the provider ids. If the session has a recording, the click also seeks it.
+
+Below the line, seven steps show the failure-to-fix chain: original failure, first fix, still failing, developer response, revised code, passing test, independent verification. A missing step is said in words, never filled in. Three questions come from fixed rules and cite event ids. The page shows unknowns and what was not captured.
+
+Sources: the golden Claude Code take (verified) and any imported T3 Code thread (experimental). Open a source directly with `/recruiter?source=golden` or `/recruiter?source=t3:<thread id>`. The live updates feed from CR-9 is below the journey.
+
+## T3 Code adapter (experimental)
+
+DevLens can read a T3 Code thread from the T3 server's local store, read-only, and show it on `/recruiter`. It works for any provider T3 runs (Claude, Codex, Cursor) and keeps the provider and model T3 recorded for each run. It is labelled experimental: the T3 store is internal to T3, and the adapter was checked only against T3 Code 0.1.3. Details, event mapping, and limits: [packages/t3/README.md](packages/t3/README.md). Demo steps: [plans/t3-integration.md](plans/t3-integration.md).
+
+```
+npm run t3 -- list --workspace ~/Code-Git-Repos/sprintboard-demo
+npm run t3 -- import --thread <id>
+npm run t3 -- verify --thread <id>
+```
 
 ## Scenarios
 
@@ -151,8 +172,10 @@ It does show that a normal command ran in the sandbox and returned `passed`, and
 
 | Path | Contents |
 |---|---|
-| `apps/web` | Next.js app: `/replay`, `/record`, `/api/replay`, `/api/recordings` |
+| `apps/web` | Next.js app: `/replay`, `/record`, `/recruiter`, `/api/replay`, `/api/journey`, `/api/recordings` |
 | `packages/capture` | Claude Code hook handler and redaction |
+| `packages/t3` | T3 Code adapter (experimental): read-only reader, mapper, import, verify |
+| `apps/web/journey` | Provider-neutral journey builder, line layout, and evidence panel for `/recruiter` |
 | `packages/link` | Rules, edges, and the sandbox re-run |
 | `packages/cli` | `init` (installs project-local hooks), `link`, `rerun` |
 | `packages/core` | Event contract, Supabase access, demo and smoke scripts |
@@ -164,7 +187,7 @@ Contract: [plans/devlens.contract.md](plans/devlens.contract.md). Plan: [plans/d
 
 ## Product limits
 
-No score, rank, or hire verdict. Claude Code is the only capture adapter. Screen recording needs explicit consent, with audio and camera off.
+No score, rank, or hire verdict. Claude Code hooks are the verified capture adapter. The T3 Code adapter is experimental and read-only. Screen recording needs explicit consent, with audio and camera off.
 
 ## After the fair
 

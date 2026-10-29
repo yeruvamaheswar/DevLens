@@ -3,6 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RecruiterEntry } from '../../../packages/recruiter/src/build';
 import type { RecruiterState } from '../../../packages/recruiter/src/api';
 import { TopBar } from '../ui/topbar';
+import { JourneySection } from './journey-section';
 import styles from './page.module.css';
 
 const POLL_MS = 5_000;
@@ -110,12 +111,19 @@ export default function RecruiterPage() {
 
   return (
     <>
-      <TopBar place="home" />
+      <TopBar place="recruiter" />
       <main id="main" className="page">
         <section className={`band ${styles.head}`}>
           <h1 className={styles.title}>Recruiter view</h1>
           <p className={styles.project}>{state?.project ?? ' '}</p>
           <p className={styles.statement}>The developer's prompts, word for word, and facts from the session log. No score, rank, or verdict.</p>
+        </section>
+
+        <JourneySection />
+
+        <section className={styles.liveHead} aria-labelledby="live-title">
+          <h2 id="live-title">Live updates from the developer</h2>
+          <p className={styles.project}>{state?.project ?? ' '}</p>
           <div className={styles.actions}>
             <button type="button" className="btn btn--primary" onClick={() => void requestStatus()} disabled={!sharing || sending}>
               {sending ? 'Requesting…' : 'Request status'}

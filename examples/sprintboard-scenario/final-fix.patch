@@ -1,0 +1,60 @@
+diff --git a/src/status.js b/src/status.js
+new file mode 100644
+index 0000000..a813147
+--- /dev/null
++++ b/src/status.js
+@@ -0,0 +1,13 @@
++// API values use a dash (in-progress); the database stores in_progress.
++const API_TO_STORED = {
++  open: 'open',
++  'in-progress': 'in_progress',
++  completed: 'completed',
++};
++
++export const API_STATUSES = Object.keys(API_TO_STORED);
++
++// Returns the stored value for an API status, or undefined if it is unknown.
++export function normalizeStatus(value) {
++  return Object.hasOwn(API_TO_STORED, value) ? API_TO_STORED[value] : undefined;
++}
+diff --git a/src/validate.js b/src/validate.js
+index 1b5fc7b..4106217 100644
+--- a/src/validate.js
++++ b/src/validate.js
+@@ -1,15 +1,16 @@
+ import { HttpError } from './http.js';
++import { API_STATUSES, normalizeStatus } from './status.js';
+ 
+-const FILTER_STATUSES = ['open', 'in_progress', 'completed', 'all'];
+-const INPUT_STATUSES = ['open', 'in-progress', 'completed'];
++const FILTER_STATUSES = [...API_STATUSES, 'all'];
+ const PRIORITIES = ['low', 'medium', 'high'];
+ const MAX_QUERY_LENGTH = 100;
+ 
+ // Reads and checks the query string of GET /api/issues.
+ export function parseListQuery(searchParams) {
+-  const status = searchParams.get('status') ?? 'all';
+-  if (!FILTER_STATUSES.includes(status)) {
+-    throw new HttpError(400, 'invalid_status', `Unknown status "${status}"`, {
++  const requested = searchParams.get('status') ?? 'all';
++  const status = requested === 'all' ? 'all' : normalizeStatus(requested);
++  if (!status) {
++    throw new HttpError(400, 'invalid_status', `Unknown status "${requested}"`, {
+       status: `Must be one of: ${FILTER_STATUSES.join(', ')}`,
+     });
+   }
+@@ -47,10 +48,11 @@ export function parseIssueInput(body, { partial = false } = {}) {
+   }
+ 
+   if ('status' in body) {
+-    if (!INPUT_STATUSES.includes(body.status)) {
+-      fields.status = `Must be one of: ${INPUT_STATUSES.join(', ')}`;
++    const status = normalizeStatus(body.status);
++    if (!status) {
++      fields.status = `Must be one of: ${API_STATUSES.join(', ')}`;
+     } else {
+-      clean.status = body.status.replace('-', '_');
++      clean.status = status;
+     }
+   }
+ 

@@ -1,0 +1,12 @@
+diff --git a/src/validate.js b/src/validate.js
+index 1b5fc7b..750b668 100644
+--- a/src/validate.js
++++ b/src/validate.js
+@@ -1,6 +1,6 @@
+ import { HttpError } from './http.js';
+ 
+-const FILTER_STATUSES = ['open', 'in_progress', 'completed', 'all'];
++const FILTER_STATUSES = ['open', 'in_progress', 'in-progress', 'completed', 'all'];
+ const INPUT_STATUSES = ['open', 'in-progress', 'completed'];
+ const PRIORITIES = ['low', 'medium', 'high'];
+ const MAX_QUERY_LENGTH = 100;
