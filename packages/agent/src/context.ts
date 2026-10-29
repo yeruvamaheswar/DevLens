@@ -95,7 +95,10 @@ function touchedPaths(events: Event[]): string[] {
 }
 
 export function buildContext(projectDir: string, session_id: string, allEvents: Event[]): AgentContext {
-  const events = allEvents.slice(-MAX_EVENTS);
+  // Keep the latest developer prompt in view even after a long turn: every question must cite one.
+  const window = allEvents.slice(-MAX_EVENTS);
+  const lastPrompt = allEvents.findLast((event) => event.actor === 'developer' && event.type === 'prompt');
+  const events = lastPrompt && !window.includes(lastPrompt) ? [lastPrompt, ...window.slice(1)] : window;
   const files: { path: string; text: string }[] = [];
   const have = new Set<string>();
   const wanted = [

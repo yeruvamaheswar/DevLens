@@ -24,7 +24,8 @@ export type Verdict = { ok: true; text: string; cites: string[]; reason: string 
 
 // `clean` runs first (normalize, then redact). The banned-word check and the kept text both use its output,
 // so the stored text is exactly the validated text.
-export function validateReply(raw: string, validIds: ReadonlySet<string>, clean: (text: string) => string = normalize): Verdict {
+// `ids.developer` holds the developer's own events: a question must rest on at least one, so it is about what they asked for.
+export function validateReply(raw: string, ids: { all: ReadonlySet<string>; developer: ReadonlySet<string> }, clean: (text: string) => string = normalize): Verdict {
   let body = raw.trim();
   const fence = /^```(?:json)?\s*([\s\S]*?)\s*```$/.exec(body);
   if (fence) body = fence[1];
@@ -43,7 +44,8 @@ export function validateReply(raw: string, validIds: ReadonlySet<string>, clean:
   if (cleaned.length === 0) return { ok: false, reason: 'bad_schema' };
   if (cleaned.length > MAX_QUESTION_CHARS) return { ok: false, reason: 'too_long' };
   if (cites.length === 0) return { ok: false, reason: 'no_citation' };
-  if ((cites as string[]).some((id) => !validIds.has(id))) return { ok: false, reason: 'unknown_event_id' };
+  if ((cites as string[]).some((id) => !ids.all.has(id))) return { ok: false, reason: 'unknown_event_id' };
+  if (!(cites as string[]).some((id) => ids.developer.has(id))) return { ok: false, reason: 'no_developer_citation' };
   for (const { name, pattern } of BANNED) if (pattern.test(cleaned)) return { ok: false, reason: `banned_${name}` };
   const unique = [...new Set(cites as string[])];
   return { ok: true, text: cleaned, cites: unique, reason: `cites ${unique.length} real session event${unique.length === 1 ? '' : 's'}` };

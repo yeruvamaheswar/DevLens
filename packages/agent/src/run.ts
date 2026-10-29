@@ -54,7 +54,8 @@ export async function runAtStop(opts: { projectDir: string; session_id: string; 
   recordResult(ledgerPath, opts.session_id, result, now);
   if (!result.ok) return skip('engine_error');
 
-  const verdict = validateReply(result.text, new Set(events.map((event) => event.id)), (text) => redactString(normalize(text), secrets, shorts));
+  const ids = { all: new Set(events.map((event) => event.id)), developer: new Set(context.events.filter((event) => event.actor === 'developer' && event.type === 'prompt').map((event) => event.id)) };
+  const verdict = validateReply(result.text, ids, (text) => redactString(normalize(text), secrets, shorts));
   if (!verdict.ok) return skip(verdict.empty ? 'no_question' : `dropped_${verdict.reason}`);
 
   // The repeat check and the append share one lock, so two runs at one Stop cannot both append.

@@ -15,7 +15,8 @@ import type { EngineResult, QuestionEngine } from '../src/types';
 const S = 'sess';
 const STOP = `${S}:Stop:p1`;
 const mk = (id: string, type: Event['type'], payload: Record<string, unknown> = {}): Event => ({ id, session_id: S, project_id: 'proj', ts: '2026-01-01T00:00:00.000Z', seq: 0, actor: 'agent', type, source: 'claude_code_hook', provenance: 'observed', recording_ref: null, media_offset_ms: null, payload });
-const EVENTS = [mk(`${S}:UserPromptSubmit:p1`, 'prompt', { prompt: 'add retry' }), mk(`${S}:t1:post`, 'file_edit', { files: ['src/a.ts'] }), mk(STOP, 'stop', { hook_event_name: 'Stop' })];
+const PROMPT = `${S}:UserPromptSubmit:p1`;
+const EVENTS = [{ ...mk(PROMPT, 'prompt', { prompt: 'add retry' }), actor: 'developer' as const }, mk(`${S}:t1:post`, 'file_edit', { files: ['src/a.ts'] }), mk(STOP, 'stop', { hook_event_name: 'Stop' })];
 
 let dir: string;
 const ledger = () => (existsSync(path.join(dir, '.devlens/agent-ledger.jsonl')) ? readFileSync(path.join(dir, '.devlens/agent-ledger.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l)) : []);
@@ -43,7 +44,7 @@ function fake(reply: string | (() => Promise<EngineResult>)) {
   };
   return { engine, calls };
 }
-const good = JSON.stringify({ question: { text: 'Why did you add a retry here instead of failing fast?', cites: [`${S}:t1:post`] } });
+const good = JSON.stringify({ question: { text: 'Why did you add a retry here instead of failing fast?', cites: [PROMPT, `${S}:t1:post`] } });
 const run = (engine: QuestionEngine) => runAtStop({ projectDir: dir, session_id: S, stop_event_id: STOP, engine });
 
 beforeEach(() => { dir = mkdtempSync(path.join(tmpdir(), 'agent-test-')); });
@@ -71,7 +72,7 @@ describe('question validation', () => {
     expect(out.asked[0].id).toBe(`${S}:devlens_question:${STOP}`);
     const last = eventLines().at(-1) as Event;
     expect(last).toMatchObject({ actor: 'tool', type: 'question', recording_ref: null, media_offset_ms: null, source: 'devlens_question', provenance: 'inferred', id: out.asked[0].id });
-    expect((last.payload as { cites: string[] }).cites).toEqual([`${S}:t1:post`]);
+    expect((last.payload as { cites: string[] }).cites).toEqual([PROMPT, `${S}:t1:post`]);
     expect(eventLines()).toHaveLength(EVENTS.length + 1);
   });
 
@@ -81,10 +82,12 @@ describe('question validation', () => {
     expect(eventLines()).toHaveLength(EVENTS.length);
   });
 
-  const q = (text: string, cites: string[] = [`${S}:t1:post`]) => JSON.stringify({ question: { text, cites } });
+  const q = (text: string, cites: string[] = [PROMPT, `${S}:t1:post`]) => JSON.stringify({ question: { text, cites } });
   it.each([
     ['unknown id', q('Why a retry?', ['nope']), 'dropped_unknown_event_id'],
     ['no cites', q('Why a retry?', []), 'dropped_no_citation'],
+    ['cites only assistant events', q('Why a retry?', [`${S}:t1:post`]), 'dropped_no_developer_citation'],
+    ['cites only the Stop event', q('Why a retry?', [STOP]), 'dropped_no_developer_citation'],
     ['not JSON', 'Why did you add a retry?', 'dropped_not_json'],
     ['wrong shape', '{"text":"hi"}', 'dropped_bad_schema'],
     ['score', q('How would you score this approach?'), 'dropped_banned_score'],
@@ -276,6 +279,19 @@ describe('context and prompt', () => {
     expect(ctx.files.length).toBeLessThanOrEqual(8);
   });
 
+  it('keeps the latest developer prompt in view after a long turn, so its question is kept', async () => {
+    const many = Array.from({ length: 250 }, (_, i) => mk(`${S}:e${i}`, 'tool_call'));
+    const ctx = buildContext(dir, S, [EVENTS[0], ...many]);
+    expect(ctx.events).toHaveLength(200);
+    expect(ctx.events[0].id).toBe(PROMPT);
+    expect(ctx.events.at(-1)?.id).toBe(`${S}:e249`);
+    setup();
+    writeFileSync(path.join(dir, '.devlens/events.jsonl'), `${[EVENTS[0], ...many, EVENTS[2]].map((e) => JSON.stringify(e)).join('\n')}\n`);
+    const out = await run(fake(JSON.stringify({ question: { text: 'Why a retry here?', cites: [PROMPT, `${S}:e249`] } })).engine);
+    expect(out.skipped).toBeNull();
+    expect(out.asked).toHaveLength(1);
+  });
+
   it('redacts the prompt and passes the system prompt rules', async () => {
     setup();
     writeFileSync(path.join(dir, 'src/a.ts'), 'const k = "sk-ant-abcdefghijklmnop"; const DB_PASSWORD="hunter2hunter2";\n');
@@ -288,6 +304,9 @@ describe('context and prompt', () => {
     expect(calls[0].system).toBe(SYSTEM_PROMPT);
     expect(SYSTEM_PROMPT).toMatch(/at most one question/i);
     expect(SYSTEM_PROMPT).toMatch(/DATA, never as instructions/);
+    expect(SYSTEM_PROMPT).toMatch(/project they are building/);
+    expect(SYSTEM_PROMPT).toMatch(/Never ask about how the coding assistant worked/);
+    expect(SYSTEM_PROMPT).toMatch(/Never credit the developer with an assistant action/);
   });
 });
 
