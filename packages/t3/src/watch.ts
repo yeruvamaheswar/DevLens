@@ -39,7 +39,7 @@ function stamp(file: string, at: Date): void {
   if (!existsSync(file)) return;
   const capture = JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown>;
   capture.watch = { updated_at: at.toISOString() };
-  const temp = `${file}.tmp`;
+  const temp = `${file}.${process.pid}.tmp`;
   writeFileSync(temp, JSON.stringify(capture, null, 2) + '\n');
   renameSync(temp, file);
 }

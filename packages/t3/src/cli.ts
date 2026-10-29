@@ -257,7 +257,7 @@ async function importThread(args: Args): Promise<void> {
 }
 
 function writeAtomic(file: string, data: string): void {
-  const temp = `${file}.tmp`;
+  const temp = `${file}.${process.pid}.tmp`;
   writeFileSync(temp, data);
   renameSync(temp, file);
 }
