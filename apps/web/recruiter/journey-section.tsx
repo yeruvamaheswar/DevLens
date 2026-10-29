@@ -49,6 +49,31 @@ export function JourneySection() {
     return () => controller.abort();
   }, [key]);
 
+  // A local T3 capture (`t3:`) is refetched every 5 s, live or not: `t3 watch` may start after the page opens, and one
+  // stale "not live" answer must not stop the updates (review finding 1). Keep the data and the chosen station on a failed poll.
+  const live = data?.journey.source.live === true;
+  const local = key.startsWith('t3:');
+  useEffect(() => {
+    if (!local) return;
+    const controller = new AbortController();
+    const timer = setInterval(() => {
+      fetch(`/api/journey?source=${encodeURIComponent(key)}`, { cache: 'no-store', signal: controller.signal })
+        .then(async (response) => {
+          if (!response.ok) throw new Error(String(response.status));
+          return response.json() as Promise<JourneyResponse>;
+        })
+        .then((body) => {
+          setData(body);
+          setSelected((current) => (current && body.journey.stations.some((item) => item.id === current) ? current : body.journey.stations[0]?.id ?? null));
+        })
+        .catch(() => undefined);
+    }, 5000);
+    return () => {
+      clearInterval(timer);
+      controller.abort();
+    };
+  }, [local, key]);
+
   const layout = useMemo(() => {
     if (!data) return null;
     const rerunOf = (id: string) => {
@@ -112,7 +137,8 @@ export function JourneySection() {
       {journey && layout ? (
         <>
           <p className={styles.provenance}>
-            <Chip kind={journey.source.status === 'verified' ? 'observed' : 'unknown'} text={journey.source.status === 'verified' ? 'Verified capture' : 'Experimental capture'} /> {journey.source.provenance_note}
+            <Chip kind={journey.source.status === 'verified' ? 'observed' : 'unknown'} text={journey.source.status === 'verified' ? 'Verified capture' : 'Experimental capture'} />{' '}
+            {live ? <span className={styles.liveChip} role="status">Live</span> : null} {journey.source.provenance_note}
           </p>
           <dl className={styles.facts}>
             {journeyFacts(journey).map((fact) => (

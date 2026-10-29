@@ -1,12 +1,26 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { captureDir } from '../../../journey/sources';
+import { webCaptureBucket } from '../../../../../packages/t3/src/publish';
+import { captureDir, publishedName } from '../../../journey/sources';
+import { loadRepoEnv } from '../../recordings/storage';
 
 export const runtime = 'nodejs';
 
+const SIGNED_URL_SECONDS = 600;
+
 // Serves the take of one T3 capture (recording.webm in its folder). Never a path from the request.
+// A published capture redirects to a short-lived signed URL for its private object; the bucket is never public.
 export async function GET(request: Request) {
-  const dir = captureDir(new URL(request.url).searchParams.get('source') ?? '');
+  const key = new URL(request.url).searchParams.get('source') ?? '';
+  const name = publishedName(key);
+  if (name) {
+    loadRepoEnv();
+    const bucket = webCaptureBucket();
+    const url = bucket ? await bucket.signedUrl(`${name}/recording.webm`, SIGNED_URL_SECONDS) : null;
+    if (!url) return new Response('Recording unavailable.', { status: 404 });
+    return new Response(null, { status: 302, headers: { Location: url, 'Cache-Control': 'no-store' } });
+  }
+  const dir = captureDir(key);
   if (!dir) return new Response('Recording unavailable.', { status: 404 });
   let file: Buffer;
   try {

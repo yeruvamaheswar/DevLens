@@ -47,7 +47,7 @@ const PASS_OUT = 'ℹ tests 10\nℹ pass 10\nℹ fail 0';
 function snapshot(): T3ThreadSnapshot {
   n = 0;
   return {
-    migration: 69,
+    migration: 72,
     thread: { thread_id: T, project_id: 'p1', title: 'Fix status filter', created_at: '2026-10-29T15:00:00.000Z', updated_at: '2026-10-29T15:09:00.000Z', payload: { branch: 'main', worktreePath: null } },
     project: { project_id: 'p1', title: 'sprintboard-demo', workspace_root: ROOT },
     runs: [run(1, 'claude-sonnet-5-5'), run(2, 'claude-sonnet-5-5'), run(3, 'gpt-6.1-sol', 'codex')],
@@ -165,8 +165,8 @@ describe('T3 store (temporary database)', () => {
       CREATE TABLE orchestration_v2_projection_runs (run_id TEXT PRIMARY KEY, thread_id TEXT, ordinal INTEGER, provider TEXT, provider_thread_id TEXT, status TEXT, requested_at TEXT, completed_at TEXT${withRunsPayload ? ', payload_json TEXT' : ''});
       CREATE TABLE orchestration_v2_projection_turn_items (turn_item_id TEXT PRIMARY KEY, thread_id TEXT, run_id TEXT, ordinal INTEGER, type TEXT, status TEXT, updated_at TEXT, payload_json TEXT);
       CREATE TABLE orchestration_v2_projection_checkpoints (checkpoint_id TEXT PRIMARY KEY, thread_id TEXT, run_id TEXT, status TEXT, captured_at TEXT, payload_json TEXT);
-      CREATE TABLE orchestration_events (sequence INTEGER PRIMARY KEY AUTOINCREMENT, event_id TEXT, event_type TEXT, occurred_at TEXT, payload_json TEXT);
-      INSERT INTO effect_sql_migrations VALUES (69, 'x');
+      CREATE TABLE orchestration_events (sequence INTEGER PRIMARY KEY AUTOINCREMENT, event_id TEXT, stream_id TEXT, event_type TEXT, occurred_at TEXT, payload_json TEXT);
+      INSERT INTO effect_sql_migrations VALUES (72, 'x');
     `);
     return db;
   }
@@ -182,7 +182,7 @@ describe('T3 store (temporary database)', () => {
     checkSchema(ro);
     const snap = readThread(ro, T);
     ro.close();
-    expect(snap.migration).toBe(69);
+    expect(snap.migration).toBe(72);
     expect(snap.project?.workspace_root).toBe(ROOT);
     expect(snap.runs[0].payload).toEqual({ modelSelection: { model: 'm' } });
     expect(snap.items.map((row) => row.type)).toEqual(['user_message']);
@@ -218,6 +218,52 @@ describe('T3 test detection (review finding 1 and 7)', () => {
     ]) {
       expect(isTestRun(command), command).toBe(false);
     }
+  });
+
+  it('counts a single cargo test call as a test run (EVAL-3)', () => {
+    for (const command of [
+      'cargo test',
+      'cargo test --offline',
+      'cd app && cargo test -- --nocapture',
+      'cargo test -p api --all',
+      'cargo test --workspace -q',
+      'RUST_BACKTRACE=1 cargo test 2>&1 | tail -30',
+      'cd /work/rust-app && cargo test tests::adds -- --test-threads=1',
+    ]) {
+      expect(isTestRun(command), command).toBe(true);
+    }
+    for (const command of [
+      'cargo build',
+      'cargo run',
+      'cargo check',
+      'cargo test && rm -rf x',
+      'cargo build && cargo test',
+      'cargo testx',
+      'echo cargo test',
+      'cargo test | sh',
+      'cd . & cat /etc/hosts && cargo test',
+      'cd x | sh && cargo test',
+      'cat > src/lib.rs <<EOF\nfn main() {}\nEOF\ncargo test',
+    ]) {
+      expect(isTestRun(command), command).toBe(false);
+    }
+  });
+
+  it('maps cargo test output to a status (EVAL-4)', () => {
+    const snap = snapshot();
+    const ok = 'running 1 test\ntest tests::adds ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n';
+    const failed = 'test t::bad ... FAILED\n\ntest result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass `--lib`\n';
+    const compile = 'error[E0308]: mismatched types\n --> src/lib.rs:1:21\n\nerror: could not compile `api` (lib test) due to 1 previous error\n';
+    snap.items = [
+      item(1, 'command_execution', { input: 'cargo test', output: ok, exitCode: 0 }),
+      item(2, 'command_execution', { input: 'cargo test', output: failed, exitCode: 101 }),
+      item(3, 'command_execution', { input: 'cd app && cargo test', output: compile, exitCode: 101 }),
+      item(4, 'command_execution', { input: 'cargo build', output: compile, exitCode: 101 }),
+    ];
+    snap.checkpoints = [];
+    const { events } = mapThread(snap);
+    expect(events.map((event) => [event.type, event.payload.status])).toEqual([['test', 'passed'], ['test', 'failed'], ['test', 'failed'], ['tool_call', undefined]]);
+    expect(events[2].payload).toMatchObject({ signal: 'output_parse' });
   });
 
   it('does not claim a pass when the provider says the command failed', () => {

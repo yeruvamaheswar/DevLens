@@ -1,12 +1,12 @@
 // Read-only access to the T3 Code server's local state database.
 // T3 Code keeps an event log and projections in SQLite. DevLens opens it read-only and never writes.
-// This schema is internal to T3 Code, not a published API. Checked against T3 Code 0.1.3 (migration 69).
+// This schema is internal to T3 Code, not a published API. Checked against T3 Code 0.1.3 (migration 69) and 0.1.5 (migration 72).
 import { DatabaseSync } from 'node:sqlite';
 import { homedir } from 'node:os';
 import path from 'node:path';
 
 export const DEFAULT_T3_DB = path.join(homedir(), '.t3', 'userdata', 'statev2.sqlite');
-export const CHECKED_MIGRATION = 69;
+export const CHECKED_MIGRATION = 72;
 
 export type T3Project = { project_id: string; title: string; workspace_root: string };
 export type T3Thread = {
@@ -60,7 +60,7 @@ const REQUIRED: Record<string, string[]> = {
   orchestration_v2_projection_runs: ['run_id', 'thread_id', 'ordinal', 'provider', 'provider_thread_id', 'status', 'requested_at', 'completed_at', 'payload_json'],
   orchestration_v2_projection_turn_items: ['turn_item_id', 'thread_id', 'run_id', 'ordinal', 'type', 'status', 'updated_at', 'payload_json'],
   orchestration_v2_projection_checkpoints: ['checkpoint_id', 'thread_id', 'run_id', 'status', 'captured_at', 'payload_json'],
-  orchestration_events: ['sequence', 'event_id', 'event_type', 'occurred_at', 'payload_json'],
+  orchestration_events: ['sequence', 'event_id', 'stream_id', 'event_type', 'occurred_at', 'payload_json'],
 };
 
 export class T3SchemaError extends Error {}

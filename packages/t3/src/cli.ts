@@ -1,15 +1,18 @@
 // DevLens T3 Code adapter (experimental). Reads one T3 thread read-only and writes DevLens events.
 //   npx tsx packages/t3/src/cli.ts list [--workspace <dir>] [--db <statev2.sqlite>]
 //   npx tsx packages/t3/src/cli.ts import --thread <id> [--out <dir>] [--recording <meta.json>] [--rerun <rerun.jsonl>] [--no-git] [--db <path>]
+//   npx tsx packages/t3/src/cli.ts watch (--thread <id> | --workspace <dir>) [--interval <ms>]   (live capture: re-import when the thread changes)
 //   npx tsx packages/t3/src/cli.ts verify --thread <id>   (sandbox re-run of the last passing test, then re-import)
 //   --root <dir>: paths relative to <dir> instead of the thread's checkout. --no-checkpoints: leave T3 git checkpoints out.
 //   npx tsx packages/t3/src/cli.ts save --thread <id> --as <name> [--with-recording]   (copy into examples/t3-captures/<name>, home paths as ~)
+//   npx tsx packages/t3/src/cli.ts publish --thread <id> [--as <name>] [--with-recording]   (upload to the private t3-captures bucket for the hosted journey)
 // Output (default .devlens/t3/<thread>/, git-ignored): events.jsonl, edges.jsonl, capture.json.
 // A recording-meta.json or rerun.jsonl already in that folder is used again on re-import.
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import type { Event, RecordingMeta } from '../../core/event';
 import { attachMedia } from '../../core/src/sync';
 import { planSession } from '../../cli/src/link';
@@ -17,6 +20,11 @@ import { redactValue, secretValuesFromEnv, shortSecretValuesFromEnv } from '../.
 import { DEFAULT_T3_DB, listThreads, openT3, readThread } from './store';
 import { mapThread } from './map';
 import { rerunTest } from '../../link/src/rerun';
+import { startWatch } from './watch';
+import { captureBucketFromEnv, defaultPublishName, publishCapture } from './publish';
+import { readThreadViaRpc } from './rpc';
+import { bridgeQuestions } from './bridge';
+import type { T3ThreadSnapshot } from './store';
 
 type Args = { command: string; flags: Map<string, string | true> };
 
@@ -138,24 +146,40 @@ async function verify(args: Args): Promise<void> {
     writeFileSync(rerunFile, lines.map((item) => JSON.stringify(item)).join('\n') + '\n');
   }
   console.log(`Sandbox re-run of "${run}" on a copy of ${path.basename(root)}: ${String(event.payload.status)}`);
-  importThread(args);
+  await importThread(args);
 }
 
-function importThread(args: Args): void {
-  const threadId = flag(args, 'thread');
-  if (!threadId) throw new Error('import needs --thread <id>. Run `list` to find one.');
-  const out = outDir(args, threadId);
-  const db = openT3(flag(args, 'db') ?? DEFAULT_T3_DB);
-  let snapshot;
-  try {
-    snapshot = readThread(db, threadId);
-  } finally {
-    db.close();
+export type ImportOptions = {
+  threadId: string;
+  out: string;
+  db: string;
+  root: string | null;
+  recording: string | null;
+  rerun: string | null;
+  noGit: boolean;
+  noCheckpoints: boolean;
+  // Set when the thread was read through T3's RPC (`--via rpc`) instead of the database.
+  snapshot?: T3ThreadSnapshot;
+};
+
+export type ImportResult = { events: Event[]; edgeCount: number; rerunCount: number; capture: ReturnType<typeof mapThread>['capture'] };
+
+// The one import path. `import` and `watch` both call it, so a watched capture equals a one-shot import.
+export function runImport(options: ImportOptions): ImportResult {
+  const { threadId, out } = options;
+  let snapshot = options.snapshot;
+  if (!snapshot) {
+    const db = openT3(options.db);
+    try {
+      snapshot = readThread(db, threadId);
+    } finally {
+      db.close();
+    }
   }
-  const rootFlag = flag(args, 'root');
-  const { events, capture } = mapThread(snapshot, { root: rootFlag ? path.resolve(rootFlag) : undefined, checkpoints: !args.flags.has('no-checkpoints') });
+  const rootFlag = options.root;
+  const { events, capture } = mapThread(snapshot, { root: rootFlag ? path.resolve(rootFlag) : undefined, checkpoints: !options.noCheckpoints });
   const root = (rootFlag ? path.resolve(rootFlag) : null) ?? (typeof snapshot.thread.payload.worktreePath === 'string' ? snapshot.thread.payload.worktreePath : null) ?? snapshot.project?.workspace_root ?? null;
-  if (root && existsSync(root) && !args.flags.has('no-git')) {
+  if (root && existsSync(root) && !options.noGit) {
     const count = attachGitDiffs(events, root);
     if (count === 0 && events.some((event) => event.type === 'checkpoint')) capture.unknowns.push('No git diff could be read for the T3 checkpoints in this checkout.');
   } else if (events.some((event) => event.type === 'checkpoint')) {
@@ -168,7 +192,7 @@ function importThread(args: Args): void {
   let mapped = events.map((event) => redactValue(event, secrets, shorts));
 
   const savedMeta = path.join(out, 'recording-meta.json');
-  const recordingFile = flag(args, 'recording') ?? (existsSync(savedMeta) ? savedMeta : null);
+  const recordingFile = options.recording ?? (existsSync(savedMeta) ? savedMeta : null);
   if (recordingFile) {
     const meta = JSON.parse(readFileSync(recordingFile, 'utf8')) as RecordingMeta;
     if (meta.consent !== true || meta.audio_tracks !== 0) throw new Error('The recording meta lacks consent or has audio. Not attached.');
@@ -179,22 +203,108 @@ function importThread(args: Args): void {
   }
 
   const savedRerun = path.join(out, 'rerun.jsonl');
-  const rerunFile = flag(args, 'rerun') ?? (existsSync(savedRerun) ? savedRerun : null);
+  const rerunFile = options.rerun ?? (existsSync(savedRerun) ? savedRerun : null);
   const rerun = rerunFile ? readJsonl(rerunFile) : [];
   capture.rerun = rerun.length > 0;
   const plan = planSession([...mapped.map((event, order) => ({ event, order })), ...rerun.map((event, index) => ({ event, order: mapped.length + index }))]);
 
   mkdirSync(out, { recursive: true });
-  writeFileSync(path.join(out, 'events.jsonl'), plan.events.map((event) => JSON.stringify(event)).join('\n') + '\n');
-  writeFileSync(path.join(out, 'edges.jsonl'), plan.edges.map((edge) => JSON.stringify(edge)).join('\n') + (plan.edges.length ? '\n' : ''));
-  writeFileSync(path.join(out, 'capture.json'), JSON.stringify(capture, null, 2) + '\n');
+  // Keep a live watch stamp across re-imports, so the page never sees the capture as not live mid-import.
+  const previous = path.join(out, 'capture.json');
+  if (existsSync(previous)) {
+    try {
+      const stamp = (JSON.parse(readFileSync(previous, 'utf8')) as { watch?: unknown }).watch;
+      if (stamp) (capture as Record<string, unknown>).watch = stamp;
+    } catch {
+      // A broken previous file is replaced below.
+    }
+  }
+  // Each file is written whole, then renamed, so a reader never sees a half-written file (review finding 5).
+  writeAtomic(path.join(out, 'events.jsonl'), plan.events.map((event) => JSON.stringify(event)).join('\n') + '\n');
+  writeAtomic(path.join(out, 'edges.jsonl'), plan.edges.map((edge) => JSON.stringify(edge)).join('\n') + (plan.edges.length ? '\n' : ''));
+  writeAtomic(previous, JSON.stringify(capture, null, 2) + '\n');
+  return { events: plan.events, edgeCount: plan.edges.length, rerunCount: rerun.length, capture };
+}
 
-  const count = (type: string) => plan.events.filter((event) => event.type === type).length;
-  const tests = plan.events.filter((event) => event.type === 'test' && event.source === 't3_code');
+function importOptions(args: Args, threadId: string): ImportOptions {
+  const rootFlag = flag(args, 'root');
+  return {
+    threadId,
+    out: outDir(args, threadId),
+    db: flag(args, 'db') ?? DEFAULT_T3_DB,
+    root: rootFlag,
+    recording: flag(args, 'recording'),
+    rerun: flag(args, 'rerun'),
+    noGit: args.flags.has('no-git'),
+    noCheckpoints: args.flags.has('no-checkpoints'),
+  };
+}
+
+async function importThread(args: Args): Promise<void> {
+  const threadId = flag(args, 'thread');
+  if (!threadId) throw new Error('import needs --thread <id>. Run `list` to find one.');
+  const via = flag(args, 'via') ?? 'db';
+  if (via !== 'db' && via !== 'rpc') throw new Error('--via must be db or rpc.');
+  const out = outDir(args, threadId);
+  // `--via rpc` reads through T3's authenticated RPC (read-only methods only; pair once, see packages/t3/README.md).
+  const snapshot = via === 'rpc' ? await readThreadViaRpc(threadId) : undefined;
+  const { events, edgeCount, rerunCount, capture } = runImport({ ...importOptions(args, threadId), snapshot });
+  const count = (type: string) => events.filter((event) => event.type === type).length;
+  const tests = events.filter((event) => event.type === 'test' && event.source === 't3_code');
   console.log(`Imported T3 thread ${threadId} "${capture.t3.title}" into ${out}`);
-  console.log(`runs=${capture.runs.length} prompts=${count('prompt')} tool_calls=${count('tool_call')} edits=${count('file_edit')} tests=${tests.length} (failed ${tests.filter((t) => t.payload.status === 'failed').length}, passed ${tests.filter((t) => t.payload.status === 'passed').length}) checkpoints=${count('checkpoint')} rerun=${rerun.length} edges=${plan.edges.length}`);
+  console.log(`runs=${capture.runs.length} prompts=${count('prompt')} tool_calls=${count('tool_call')} edits=${count('file_edit')} tests=${tests.length} (failed ${tests.filter((t) => t.payload.status === 'failed').length}, passed ${tests.filter((t) => t.payload.status === 'passed').length}) checkpoints=${count('checkpoint')} rerun=${rerunCount} edges=${edgeCount}`);
   console.log(`models: ${[...new Set(capture.runs.map((run) => `${run.provider}/${run.model}`))].join(', ')}${capture.model_switches.length ? `; switches=${capture.model_switches.length}` : ''}`);
   for (const line of capture.unknowns) console.log(`unknown: ${line}`);
+}
+
+function writeAtomic(file: string, data: string): void {
+  const temp = `${file}.${process.pid}.tmp`;
+  writeFileSync(temp, data);
+  renameSync(temp, file);
+}
+
+// --interval in milliseconds: a number, at least 250 (review finding 6).
+export function parseInterval(raw: string | true | undefined): number {
+  if (raw === undefined) return 2000;
+  const value = Number(raw);
+  if (raw === true || !Number.isFinite(value) || value < 250) throw new Error('--interval must be a number of milliseconds, at least 250.');
+  return value;
+}
+
+// Live capture: poll the read-only database and re-import through runImport when the thread changes.
+async function watch(args: Args): Promise<void> {
+  const thread = flag(args, 'thread');
+  const workspace = flag(args, 'workspace');
+  if (!thread && !workspace) throw new Error('watch needs --thread <id> or --workspace <dir>.');
+  const dbPath = flag(args, 'db') ?? DEFAULT_T3_DB;
+  const intervalMs = parseInterval(args.flags.get('interval'));
+  const askedAt = new Set<string>();
+  const watcher = startWatch({
+    db: dbPath,
+    thread: thread ?? undefined,
+    workspace: workspace ?? undefined,
+    outDir: (threadId) => outDir(args, threadId),
+    intervalMs,
+    importOnce: (threadId) => {
+      const result = runImport(importOptions(args, threadId));
+      // Questions: when a T3 run completes, start the DevLens question agent, as Claude Code's Stop hook does.
+      try {
+        // Same root as the import: --root first, then the thread's worktree or project (review findings 3-4).
+        const root = flag(args, 'root') ?? threadRoot(args, threadId);
+        if (root) {
+          const bridged = bridgeQuestions({ root, events: result.events, runs: result.capture.runs, started: askedAt });
+          if (bridged.started.length) console.error(`${new Date().toISOString()} question agent started for ${bridged.started.join(', ')}`);
+        }
+      } catch (error) {
+        console.error(`${new Date().toISOString()} question bridge error: ${error instanceof Error ? error.message : String(error)}`);
+      }
+      return { events: result.events.length };
+    },
+  });
+  process.once('SIGINT', () => void watcher.stop());
+  process.once('SIGTERM', () => void watcher.stop());
+  console.error(`Watching ${thread ? `thread ${thread}` : `the newest thread in ${workspace}`} every ${intervalMs / 1000} s. Ctrl+C stops.`);
+  await watcher.done;
 }
 
 // A saved capture is committed with the repo, so the hosted journey can show it. Home paths become ~.
@@ -216,19 +326,38 @@ function save(args: Args): void {
   console.log(`Saved ${threadId} as examples/t3-captures/${name}${args.flags.has('with-recording') ? ' with its recording' : ' without its recording'}. Review it before you commit: it will be public if the repo is.`);
 }
 
+// A published capture lives in private storage, so the hosted journey shows it without a Git push. Server key only.
+async function publish(args: Args): Promise<void> {
+  const threadId = flag(args, 'thread');
+  if (!threadId) throw new Error('publish needs --thread <id> [--as <name>] [--with-recording].');
+  const name = flag(args, 'as') ?? defaultPublishName(threadId);
+  try { process.loadEnvFile?.('.env'); } catch { /* use the process environment */ }
+  const bucket = captureBucketFromEnv(process.env, 120_000);
+  if (!bucket) throw new Error('NEXT_PUBLIC_SUPABASE_URL (the devlens project) and SUPABASE_SECRET_KEY must be set in .env.');
+  const withRecording = args.flags.has('with-recording');
+  const uploaded = await publishCapture({ dir: outDir(args, threadId), name, withRecording, bucket });
+  for (const item of uploaded) console.log(`${item.object}  ${item.bytes} bytes`);
+  console.log(`Published ${threadId} as t3-pub:${name}${withRecording ? ' with its recording' : ' without its recording'}.`);
+}
+
 async function main(argv: readonly string[]): Promise<void> {
   const args = parseArgs(argv);
   if (args.command === 'list') list(args);
-  else if (args.command === 'import') importThread(args);
+  else if (args.command === 'import') await importThread(args);
   else if (args.command === 'verify') await verify(args);
+  else if (args.command === 'watch') await watch(args);
   else if (args.command === 'save') save(args);
+  else if (args.command === 'publish') await publish(args);
   else {
-    console.log('Usage: tsx packages/t3/src/cli.ts list [--workspace <dir>] | import --thread <id> [--out <dir>] [--recording <meta.json>] [--rerun <rerun.jsonl>] [--no-git] | verify --thread <id> [--dir <checkout>]');
+    console.log('Usage: tsx packages/t3/src/cli.ts list [--workspace <dir>] | import --thread <id> [--out <dir>] [--recording <meta.json>] [--rerun <rerun.jsonl>] [--no-git] | verify --thread <id> [--dir <checkout>] | watch (--thread <id> | --workspace <dir>) [--interval <ms>]');
     process.exitCode = args.command === 'help' ? 0 : 1;
   }
 }
 
-main(process.argv.slice(2)).catch((error: unknown) => {
-  console.error(error instanceof Error ? error.message : String(error));
-  process.exitCode = 1;
-});
+// Run only as the entry point, so tests can import runImport.
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
+  main(process.argv.slice(2)).catch((error: unknown) => {
+    console.error(error instanceof Error ? error.message : String(error));
+    process.exitCode = 1;
+  });
+}
