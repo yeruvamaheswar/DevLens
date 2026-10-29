@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { listSources, loadJourney, publishedName } from '../../../apps/web/journey/sources';
-import { captureBucketFromEnv, defaultPublishName, isPublishedName, publishCapture, type CaptureBucket } from '../src/publish';
+import { captureBucketFromEnv, defaultPublishName, isPublishedName, publishCapture, webCaptureBucket, type CaptureBucket } from '../src/publish';
 
 const SAVED = path.join(process.cwd(), 'examples', 't3-captures', 'sprintboard-rehearsal');
 const HOME = '/Users/someone';
@@ -143,5 +143,25 @@ describe('published journey sources', () => {
     const sources = await listSources(null);
     expect(sources.some((source) => source.key.startsWith('t3-pub:'))).toBe(false);
     expect(await loadJourney('t3-pub:rehearsal-2', null)).toBeNull();
+  });
+});
+
+describe('slice 3 review fixes', () => {
+  it('refuses to upload anything when a capture holds a secret value (finding 2)', async () => {
+    for (const leak of ['sb_secret_abcdefghijklmnop', 'my-private-value-123']) {
+      const dir = captureFolder(false);
+      const events = readFileSync(path.join(dir, 'events.jsonl'), 'utf8');
+      writeFileSync(path.join(dir, 'events.jsonl'), events + JSON.stringify({ id: 'leak', payload: { output: `KEY=${leak}` } }) + '\n');
+      const bucket = fakeBucket();
+      await expect(publishCapture({ dir, name: 'leak-check', withRecording: false, bucket, home: HOME, secrets: ['my-private-value-123'] })).rejects.toThrow(/secret value/);
+      expect(bucket.order).toEqual([]);
+    }
+  });
+
+  it('a local DEVLENS_OFFLINE=1 run lists no published captures; Vercel still does (finding 1)', () => {
+    const env = { NEXT_PUBLIC_SUPABASE_URL: 'https://hivfaqlabtbrhrviwrrm.supabase.co', SUPABASE_SECRET_KEY: 'sb_secret_test_only_value' };
+    expect(webCaptureBucket({ ...env, DEVLENS_OFFLINE: '1' })).toBeNull();
+    expect(webCaptureBucket({ ...env, DEVLENS_OFFLINE: '1', VERCEL: '1' })).not.toBeNull();
+    expect(webCaptureBucket(env)).not.toBeNull();
   });
 });

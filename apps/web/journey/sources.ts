@@ -6,7 +6,7 @@ import path from 'node:path';
 import type { Edge, Event } from '../../../packages/core/event';
 import { loadGoldenExtras } from '../../../packages/core/fixture';
 import { goldenFile, goldenLabel, localGoldenReplay } from '../../../packages/core/server';
-import { captureBucketFromEnv, isPublishedName, type CaptureBucket } from '../../../packages/t3/src/publish';
+import { isPublishedName, webCaptureBucket, type CaptureBucket } from '../../../packages/t3/src/publish';
 import { buildReplayView, redactPaths } from '../replay/view';
 import { buildJourney, type Journey, type JourneySourceMeta } from './build';
 
@@ -109,7 +109,7 @@ async function publishedCaptures(bucket: CaptureBucket | null) {
   return rows.flat();
 }
 
-export async function listSources(bucket: CaptureBucket | null = captureBucketFromEnv()): Promise<JourneySourceRow[]> {
+export async function listSources(bucket: CaptureBucket | null = webCaptureBucket()): Promise<JourneySourceRow[]> {
   const rows: JourneySourceRow[] = [{ key: 'golden', label: `Claude Code: ${goldenLabel}`, status: 'verified', adapter: 'claude_code_hook' }];
   const captures = [...capturesIn(t3Root(), 't3:', ''), ...capturesIn(savedRoot(), 't3-saved:', ' (saved)'), ...await publishedCaptures(bucket)].sort((a, b) => b.at.localeCompare(a.at));
   return [...rows, ...captures.map(({ at: _at, ...row }) => row)];
@@ -183,6 +183,6 @@ function t3Response(key: string, capture: CaptureFile, events: Event[], edges: E
 export async function loadJourney(key: string, bucket?: CaptureBucket | null): Promise<JourneyResponse | null> {
   if (key === 'golden') return golden();
   if (key.startsWith('t3:') || key.startsWith('t3-saved:')) return t3(key);
-  if (key.startsWith('t3-pub:')) return published(key, bucket === undefined ? captureBucketFromEnv() : bucket);
+  if (key.startsWith('t3-pub:')) return published(key, bucket === undefined ? webCaptureBucket() : bucket);
   return null;
 }

@@ -5,6 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { createClient } from '@supabase/supabase-js';
+import { secretValuesFromEnv } from '../../capture/redact';
 
 export const CAPTURE_BUCKET = 't3-captures';
 const PROJECT_HOST = 'hivfaqlabtbrhrviwrrm.supabase.co';
@@ -37,7 +38,8 @@ export function defaultPublishName(threadId: string): string {
 }
 
 // Null when the variables are missing or name another project. Callers treat null as "no published captures".
-export function captureBucketFromEnv(env: Record<string, string | undefined> = process.env): CaptureBucket | null {
+// Every storage call times out (review finding 1), so a missing network never hangs the journey's source list.
+export function captureBucketFromEnv(env: Record<string, string | undefined> = process.env, timeoutMs = 5000): CaptureBucket | null {
   const url = env.NEXT_PUBLIC_SUPABASE_URL;
   const secret = env.SUPABASE_SECRET_KEY;
   if (!url || !secret) return null;
@@ -49,7 +51,8 @@ export function captureBucketFromEnv(env: Record<string, string | undefined> = p
   } catch {
     return null;
   }
-  const bucket = createClient(origin, secret, { auth: { persistSession: false } }).storage.from(CAPTURE_BUCKET);
+  const timedFetch: typeof fetch = (input, init) => fetch(input, { ...init, signal: init?.signal ?? AbortSignal.timeout(timeoutMs) });
+  const bucket = createClient(origin, secret, { auth: { persistSession: false }, global: { fetch: timedFetch } }).storage.from(CAPTURE_BUCKET);
   return {
     async upload(object, body, contentType) {
       const { error } = await bucket.upload(object, body, { contentType, upsert: true });
@@ -76,7 +79,14 @@ export function captureBucketFromEnv(env: Record<string, string | undefined> = p
   };
 }
 
-export type PublishOptions = { dir: string; name: string; withRecording: boolean; bucket: CaptureBucket; home?: string };
+// For the web routes. `DEVLENS_OFFLINE=1` on a local machine means no network, so no published captures.
+// Vercel sets VERCEL=1; the hosted site keeps DEVLENS_OFFLINE=1 for the golden replay and still lists published captures.
+export function webCaptureBucket(env: Record<string, string | undefined> = process.env): CaptureBucket | null {
+  if (env.DEVLENS_OFFLINE === '1' && !env.VERCEL) return null;
+  return captureBucketFromEnv(env);
+}
+
+export type PublishOptions = { dir: string; name: string; withRecording: boolean; bucket: CaptureBucket; home?: string; secrets?: readonly string[] };
 export type Uploaded = { object: string; bytes: number };
 
 // The web routes import this file for the bucket port only; the turbopackIgnore comments keep these CLI-side reads
@@ -93,6 +103,17 @@ export async function publishCapture(options: PublishOptions): Promise<Uploaded[
   const scrub = (text: string) => (home.length > 1 ? text.split(home).join('~') : text);
   const text: [string, string][] = [...CAPTURE_FILES, ...(withRecording ? [RECORDING_META] : []), ['capture.json', 'application/json']];
   const uploaded: Uploaded[] = [];
+  // Last guard before anything leaves the machine (review finding 2): no secret value from the environment, and no
+  // Supabase secret key, in any text file. Import-time redaction should already have removed them.
+  const secrets = (options.secrets ?? secretValuesFromEnv(process.env)).filter((value) => value.length >= 8);
+  for (const [file] of text) {
+    const source = path.join(/*turbopackIgnore: true*/ dir, file);
+    if (!existsSync(/*turbopackIgnore: true*/ source)) continue;
+    const body = readFileSync(/*turbopackIgnore: true*/ source, 'utf8');
+    if (/sb_secret_[A-Za-z0-9_-]{8,}/.test(body) || secrets.some((value) => body.includes(value))) {
+      throw new Error(`${file} contains a secret value. Nothing was uploaded. Re-import the thread, check the capture, then publish again.`);
+    }
+  }
   const put = async (file: string, body: Buffer, contentType: string) => {
     const object = `${name}/${file}`;
     await bucket.upload(object, body, contentType);

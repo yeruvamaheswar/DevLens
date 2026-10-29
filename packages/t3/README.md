@@ -119,5 +119,8 @@ Worktrees: when a thread runs in a T3 worktree, paths are relative to that workt
 - `publish` uploads `events.jsonl`, `edges.jsonl`, `rerun.jsonl`, and `capture.json` to the private `t3-captures` bucket. The bucket has no policies for anon or signed-in users, so only the server key can read it. The publishable key gets "object not found".
 - `publish` uploads `recording.webm` and `recording-meta.json` only with `--with-recording`. Publishing again without the flag removes a published recording.
 - The hosted site reads published captures on the server. A published recording plays through a signed URL that expires after 10 minutes. The bucket is never public.
-- `publish` replaces home paths with `~`, the same as `save`. It does not remove other secrets. Redaction at import is the safeguard, so check the capture before you publish.
+- `publish` replaces home paths with `~`, the same as `save`. Redaction at import is the main safeguard, so check the capture before you publish.
+- `publish` refuses to upload anything if a file holds a secret value from the environment or a Supabase secret key.
+- If a publish fails midway, run it again. Until then the old label can show next to new events.
+- Every storage call times out after 5 seconds on the web side. A local `DEVLENS_OFFLINE=1` run lists no published captures. The hosted site (Vercel) still does.
 - `--as` defaults to the thread id in lowercase with dashes. Names are 3 to 61 lowercase letters, digits, and dashes.

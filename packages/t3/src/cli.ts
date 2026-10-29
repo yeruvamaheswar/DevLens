@@ -316,7 +316,7 @@ async function publish(args: Args): Promise<void> {
   if (!threadId) throw new Error('publish needs --thread <id> [--as <name>] [--with-recording].');
   const name = flag(args, 'as') ?? defaultPublishName(threadId);
   try { process.loadEnvFile?.('.env'); } catch { /* use the process environment */ }
-  const bucket = captureBucketFromEnv();
+  const bucket = captureBucketFromEnv(process.env, 120_000);
   if (!bucket) throw new Error('NEXT_PUBLIC_SUPABASE_URL (the devlens project) and SUPABASE_SECRET_KEY must be set in .env.');
   const withRecording = args.flags.has('with-recording');
   const uploaded = await publishCapture({ dir: outDir(args, threadId), name, withRecording, bucket });

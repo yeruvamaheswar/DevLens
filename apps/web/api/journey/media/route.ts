@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { captureBucketFromEnv } from '../../../../../packages/t3/src/publish';
+import { webCaptureBucket } from '../../../../../packages/t3/src/publish';
 import { captureDir, publishedName } from '../../../journey/sources';
 import { loadRepoEnv } from '../../recordings/storage';
 
@@ -15,7 +15,7 @@ export async function GET(request: Request) {
   const name = publishedName(key);
   if (name) {
     loadRepoEnv();
-    const bucket = captureBucketFromEnv();
+    const bucket = webCaptureBucket();
     const url = bucket ? await bucket.signedUrl(`${name}/recording.webm`, SIGNED_URL_SECONDS) : null;
     if (!url) return new Response('Recording unavailable.', { status: 404 });
     return new Response(null, { status: 302, headers: { Location: url, 'Cache-Control': 'no-store' } });
