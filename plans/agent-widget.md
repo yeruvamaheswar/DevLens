@@ -1,7 +1,7 @@
 ---
 kind: plan
 title: DevLens Agent widget, /record redesign, recruiter updates (CR-8, CR-9)
-status: approved, building
+status: built, video recorded; waiting on the user to watch
 updated: 2026-10-28
 ---
 Summary: DevLens runs as a background agent: a bottom-right widget for questions and notices, a redesigned /record setup page, and fact-only updates to a recruiter, ending in a new full-stack demo video.
@@ -59,17 +59,17 @@ Rules: agent stays off by default · `npm run demo` unchanged · no new npm pack
 ## Evals
 | ID | REQ | Check | Method | Result |
 |---|---|---|---|---|
-| EVAL-26 | REQ-27, REQ-28, REQ-32 | `npm run test:widget`: a new question gives mode `popup` for 10 s, then `pill` with the open count; answer and skip lower the count; the idle pill says "watching"; a failed fetch says "offline"; agent off gives `hidden`. Every mode change posts one DEC-19 message. | unit | not run |
-| EVAL-27 | REQ-30 | `npm run test:record`: with the agent on, `/record` shows the switch and "N questions waiting · open the widget", and renders no pop-up and no queue. With the agent off, `/record` renders as before. | unit | not run |
-| EVAL-28 | REQ-29, REQ-31, DEC-16 | `npm run widget:build` compiles with exit 0. The built app sets an accessory activation policy and a non-activating floating panel (grep the source). | build + verifier diff | not run |
-| EVAL-29 | REQ-27, REQ-28, REQ-29 | Live run with Terminal in front: a frame shows the pop-up bottom-right over Terminal; 10 s later a frame shows the pill with the count. No Dock icon appears. | screen frames | not run |
-| EVAL-30 | NOT-11 | During the live run, `lsappinfo front` names Terminal before, during, and after the pop-up. | integration | not run |
-| EVAL-31 | REQ-30 | After answering in the widget, an `answer` event with that text is in `.devlens/events.jsonl` and the pill count drops by one. | integration | not run |
-| EVAL-33 | REQ-36, REQ-38, NOT-12 | `npm run test:recruiter`: with sharing on and the gap passed, a Stop appends one update whose lines cite real event ids; with sharing off, or inside the gap, nothing is appended; no line matches the score, rank, verdict, or fix filter; no diff or file text appears. | unit | not run |
-| EVAL-34 | REQ-37 | `npm run test:recruiter`: `POST request_status` returns a status entry built from the events so far, and it is appended once. | unit | not run |
-| EVAL-35 | REQ-35, REQ-39 | `npm run test:record`: the two capture rows, the state clock, the agent row, and the sharing switch render; with sharing off, no recruiter call is made. | unit | not run |
-| EVAL-36 | REQ-34, REQ-40 | The new video shows the developer's work full screen, the widget, a recruiter update, and an on-demand status reply. | human | not run |
-| EVAL-32 | REQ-33 | The new video plays to the end. Frames show the pop-up, the pill count, and a typed answer, plus the "Scripted demo" caption. | human | not run |
+| EVAL-26 | REQ-27, REQ-28, REQ-32 | `npm run test:widget`: a new question gives mode `popup` for 10 s, then `pill` with the open count; answer and skip lower the count; the idle pill says "watching"; a failed fetch says "offline"; agent off gives `hidden`. Every mode change posts one DEC-19 message. | unit | pass (2026-10-28, test:widget 14/14, commit b3c4691) |
+| EVAL-27 | REQ-30 | `npm run test:record`: with the agent on, `/record` shows the switch and "N questions waiting · open the widget", and renders no pop-up and no queue. With the agent off, `/record` renders as before. | unit | pass (2026-10-28, test:record 61/61) |
+| EVAL-28 | REQ-29, REQ-31, DEC-16 | `npm run widget:build` compiles with exit 0. The built app sets an accessory activation policy and a non-activating floating panel (grep the source). | build + verifier diff | pass (2026-10-28, widget:build exit 0; grep shows .accessory, .nonactivatingPanel, .floating, hasShadow = false) |
+| EVAL-29 | REQ-27, REQ-28, REQ-29 | Live run with Terminal in front: a frame shows the pop-up bottom-right over Terminal; 10 s later a frame shows the pill with the count. No Dock icon appears. | screen frames | pass (2026-10-28, frames /tmp/devlens-int/frames and the take 2 video: pop-up bottom-right, then pill "1 question") |
+| EVAL-30 | NOT-11 | During the live run, `lsappinfo front` names Terminal before, during, and after the pop-up. | integration | pass with a fix (2026-10-28): a pop-up never took focus (Terminal stayed front); launch took focus once, fixed in f13b2ab to hand it back |
+| EVAL-31 | REQ-30 | After answering in the widget, an `answer` event with that text is in `.devlens/events.jsonl` and the pill count drops by one. | integration | pass (2026-10-28, live check: answer event written, count dropped; 3 answers in the take 2 run summary) |
+| EVAL-33 | REQ-36, REQ-38, NOT-12 | `npm run test:recruiter`: with sharing on and the gap passed, a Stop appends one update whose lines cite real event ids; with sharing off, or inside the gap, nothing is appended; no line matches the score, rank, verdict, or fix filter; no diff or file text appears. | unit | pass (2026-10-28, test:recruiter 34/34, test:capture 36/36) |
+| EVAL-34 | REQ-37 | `npm run test:recruiter`: `POST request_status` returns a status entry built from the events so far, and it is appended once. | unit | pass (2026-10-28, test:recruiter; live status reply in the take 2 video) |
+| EVAL-35 | REQ-35, REQ-39 | `npm run test:record`: the two capture rows, the state clock, the agent row, and the sharing switch render; with sharing off, no recruiter call is made. | unit | pass (2026-10-28, test:record 61/61) |
+| EVAL-36 | REQ-34, REQ-40 | The new video shows the developer's work full screen, the widget, a recruiter update, and an on-demand status reply. | human | not run (the user watches devlens-demo-recorder/out/devlens-fullstack-demo-1793241546273.mp4) |
+| EVAL-32 | REQ-33 | The new video plays to the end. Frames show the pop-up, the pill count, and a typed answer, plus the "Scripted demo" caption. | human | not run (the user watches the video) |
 
 ## Infrastructure
 | Resource | Defined in | Applied by | Secrets |
@@ -91,24 +91,24 @@ Rules: agent stays off by default · `npm run demo` unchanged · no new npm pack
 - Model: Claude (sonnet/medium); review Grok
 - Depends on: none
 - Files: `apps/web/app/agent/page.tsx` (new), `apps/web/agent/widget.tsx` (new), `apps/web/agent/widget.test.ts` (new), `apps/web/record/agent-queue.tsx`, `apps/web/record/agent-queue.test.ts`, `apps/web/record/page.tsx`, `apps/web/app/globals.css`, `package.json` (script `test:widget`)
-- [ ] Widget page with pill, pop-up, and queue modes, reusing `createAgentQueue` · Claude (sonnet/medium) · EVAL-26 · revert the slice commit
-- [ ] `/record` keeps the switch and the waiting line only · Claude (sonnet/medium) · EVAL-27 · revert the slice commit
+- [x] Widget page with pill, pop-up, and queue modes, reusing `createAgentQueue` · Claude (sonnet/medium) · EVAL-26 · revert the slice commit
+- [x] `/record` keeps the switch and the waiting line only · Claude (sonnet/medium) · EVAL-27 · revert the slice commit
 
 ### Slice 2: native floating panel
 - Covers: REQ-29, REQ-31, NOT-11 (and the panel half of REQ-27)
 - Model: Claude (opus/medium); review Grok
 - Depends on: DEC-19 protocol only, so it runs in parallel with slice 1
 - Files: `apps/widget/DevLensWidget.swift` (new), `apps/widget/README.md` (new), `package.json` (scripts `widget:build`, `widget`), `.gitignore`
-- [ ] Borderless, non-activating floating panel, on all Spaces, anchored bottom-right, transparent, accessory app (no Dock icon) · Claude (opus/medium) · EVAL-28 · revert the slice commit
-- [ ] Resize on DEC-19 messages; become key only on click; `--automation` stdin flag · Claude (opus/medium) · EVAL-28, EVAL-30 · revert the slice commit
+- [x] Borderless, non-activating floating panel, on all Spaces, anchored bottom-right, transparent, accessory app (no Dock icon) · Claude (opus/medium) · EVAL-28 · revert the slice commit
+- [x] Resize on DEC-19 messages; become key only on click; `--automation` stdin flag · Claude (opus/medium) · EVAL-28, EVAL-30 · revert the slice commit
 
 ### Slice 3: live check and new demo video
 - Covers: REQ-33, EVAL-29 to EVAL-32
 - Model: Claude (Tech Lead)
 - Depends on: slices 1 and 2 reviewed
 - Files: `devlens-demo-recorder/orchestrate.mjs` (outside this repo), `plans/devlens.contract.md` (CR-8 row and REQ-26 note)
-- [ ] Layout: caption strip at the top, Claude Code in Terminal full width, the widget floating bottom-right · Claude · EVAL-29, EVAL-30, EVAL-31 · keep the current video
-- [ ] Record and check the new take · Claude · EVAL-32 frames · keep the current video
+- [x] Layout: caption strip at the top, Claude Code in Terminal full width, the widget floating bottom-right · Claude · EVAL-29, EVAL-30, EVAL-31 · keep the current video
+- [x] Record and check the new take · Claude · EVAL-32 frames · keep the current video
 - [ ] Watch the new video · user · plays to the end and reads well · use the current video
 
 ### Slice 3b: recruiter updates
@@ -116,14 +116,14 @@ Rules: agent stays off by default · `npm run demo` unchanged · no new npm pack
 - Model: Claude (opus/medium); review Claude (sonnet/medium)
 - Depends on: DEC-25 only
 - Files: `packages/recruiter/` (new), `apps/web/api/recruiter/route.ts` (new), `apps/web/app/api/recruiter/route.ts` (new), `apps/web/recruiter/` (new), `apps/web/app/recruiter/page.tsx` (new), `packages/capture/hook.ts`, `packages/capture` tests
-- [ ] Update builder, Stop trigger, API, and `/recruiter` page · Claude (opus/medium) · EVAL-33, EVAL-34 · revert the slice commit
+- [x] Update builder, Stop trigger, API, and `/recruiter` page · Claude (opus/medium) · EVAL-33, EVAL-34 · revert the slice commit
 
 ### Slice 4: full-stack demo project
 - Covers: REQ-40
 - Model: Claude (sonnet/medium)
 - Depends on: none
 - Files: `~/Code-Git-Repos/devlens-fullstack-demo/` (new, its own git repo)
-- [ ] App with API, SQLite, UI, tests, and one seeded bug; DevLens hooks installed · Claude (sonnet/medium) · `npm test` shows exactly the seeded failure · delete the folder
+- [x] App with API, SQLite, UI, tests, and one seeded bug; DevLens hooks installed · Claude (sonnet/medium) · `npm test` shows exactly the seeded failure · delete the folder
 
 ## Changes
 | ID | Date | Change | Affects | Approved |
