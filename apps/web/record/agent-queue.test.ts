@@ -1,43 +1,13 @@
-import { spawnSync } from 'node:child_process';
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { createElement } from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { GET, POST } from '../api/agent/route';
+import { GET, POST, sessionLogFacts } from '../api/agent/route';
 import { applyPost, readAgentState } from '../api/agent/state';
-import { AgentPanelView, createAgentQueue, POLL_MS, POPUP_MS, type AgentActions, type QueueItem, type QueueSnapshot } from './agent-queue';
+import { createAgentQueue, POLL_MS, POPUP_MS, type QueueItem } from './agent-queue';
 
-// Recorder render from before the toggle was added (captured from page.tsx at commit 97139d1, phase idle).
-const RECORDER_BEFORE = `<header class="topbar"><a class="skip" href="#main">Skip to content</a><a class="wm" href="/" aria-label="DevLens home"><svg width="34" height="18" viewBox="0 0 34 18" aria-hidden="true"><path class="wm-line" d="M4 9H20L26 3"></path><circle class="wm-start" cx="4" cy="9" r="3.5"></circle><circle class="wm-end" cx="27" cy="3" r="3"></circle></svg>DevLens</a><nav aria-label="Main"><a href="/replay">Replay</a><a href="/record" aria-current="page">Record</a><span class="nav-later" title="The scenario catalog is not built yet">Scenarios <small>later</small></span></nav></header><main id="main" class="page record"><h1>Record</h1><section class="rec-panel" aria-label="Recorder"><p class="rec-state" data-phase="idle"><svg class="rec-line" width="64" height="20" viewBox="0 0 64 20" aria-hidden="true"><path class="rec-run" d="M2 10H44"></path><circle class="rec-stop" cx="52" cy="10" r="6"></circle></svg>Not recording</p><p role="status" class="rec-message">Nothing is recorded until you click Record one window or Record my desktop (second opt-in).</p><div class="rec-actions"><button type="button" class="btn btn--primary">Record one window</button><button type="button" class="btn" aria-describedby="desktop-consent">Record my desktop (second opt-in)</button></div><p class="note">Read what is <a href="#consent">captured and not captured</a> before you start.</p></section><section id="consent" aria-label="Consent" class="consent"><div><h2>Captured</h2><ul><li>The chosen window</li><li>Prompts, tool calls, diffs, and output</li><li>Test results</li><li>The typed answer</li></ul></div><div><h2>Not captured</h2><ul><li>Camera</li><li>Microphone</li><li>The whole desktop, unless you choose Record my desktop (second opt-in)</li><li>A score</li></ul></div></section><section id="desktop-consent" aria-label="Desktop consent" class="desktop-consent"><h2>Desktop opt-in</h2><p>Record my desktop is a separate choice. A monitor take can show other windows and notifications. Audio and camera stay off. You can delete the take before upload.</p></section></main>`;
-
-const noop: AgentActions = { setEnabled: () => {}, answer: () => {}, skip: () => {}, dismissPopup: () => {} };
-
-describe('/record with the opt-in off', () => {
-  it('renders today\'s Recorder plus the toggle and nothing else', () => {
-    // tsx (not vitest) loads page.tsx, because tsconfig sets jsx to preserve and vitest cannot parse JSX.
-    const code = `import React from 'react';
-import { renderToStaticMarkup } from 'react-dom/server';
-globalThis.React = React;
-const { Recorder } = await import(process.argv[1]);
-const snap = { phase: 'idle', message: 'Nothing is recorded until you click Record one window or Record my desktop (second opt-in).', objectUrl: null, wallStartMs: null, wallEndMs: null, pauses: [], mode: 'window', displaySurface: null };
-const session = { snapshot: () => snap, subscribe: () => () => {}, dispose: () => {} };
-process.stdout.write(renderToStaticMarkup(React.createElement(Recorder, { session })));
-`;
-    const result = spawnSync(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', code, path.resolve('apps/web/record/page.tsx')], { encoding: 'utf8', cwd: path.resolve('.') });
-    expect(result.status, result.stderr).toBe(0);
-    const html = result.stdout;
-    const start = html.indexOf('<section class="agent-panel"');
-    expect(start).toBeGreaterThan(-1);
-    const end = html.indexOf('</section>', start) + '</section>'.length;
-    const panel = html.slice(start, end);
-    expect(panel.match(/<button/g)).toHaveLength(1);
-    expect(panel).toContain('aria-pressed="false"');
-    expect(panel).not.toMatch(/agent-popup|agent-queue|<textarea|aria-live/);
-    expect(html.slice(0, start) + html.slice(end)).toBe(RECORDER_BEFORE);
-  });
-});
+// The pop-up and queue views moved to the widget (CR-8); apps/web/agent/widget.test.ts checks them.
+// The /record agent row is checked in page.test.ts.
 
 const item = (id: string, over: Partial<QueueItem> = {}): QueueItem => ({ id, text: `Question ${id}?`, cites: ['e1'], reason: 'r', asked_at: '2026-01-01T00:00:00.000Z', answer: null, ...over });
 const reply = (questions: QueueItem[], over: Record<string, unknown> = {}) => ({ available: true, enabled: true, session_id: 's1', questions, ...over });
@@ -66,18 +36,13 @@ describe('question queue controller', () => {
     server.set(reply([item('q1'), item('q2')]));
     await vi.advanceTimersByTimeAsync(POLL_MS);
     expect(queue.snapshot().popupId).toBe('q2');
-    const shown = renderToStaticMarkup(createElement(AgentPanelView, { snap: queue.snapshot(), actions: noop }));
-    expect(shown).toContain('aria-live="polite"');
-    expect(shown).toContain('Question q2?');
-    expect(shown).toContain('Question queue (1)');
+    expect(queue.snapshot().items.map((i) => i.id)).toEqual(['q1', 'q2']);
 
     await vi.advanceTimersByTimeAsync(POPUP_MS - 1);
     expect(queue.snapshot().popupId).toBe('q2');
     await vi.advanceTimersByTimeAsync(1);
     expect(queue.snapshot().popupId).toBeNull();
-    const moved = renderToStaticMarkup(createElement(AgentPanelView, { snap: queue.snapshot(), actions: noop }));
-    expect(moved).toContain('Question queue (2)');
-    expect(moved).not.toContain('New question');
+    expect(queue.snapshot().items.map((i) => i.id)).toEqual(['q1', 'q2']);
     queue.stop();
   });
 
@@ -116,24 +81,66 @@ describe('question queue controller', () => {
     queue.stop();
   });
 
-  it('reports unavailable and renders only a disabled toggle', async () => {
-    const queue = createAgentQueue(fakeServer({ available: false, enabled: false, session_id: null, questions: [] }).fetcher);
+  it('reports unavailable and stops polling', async () => {
+    const server = fakeServer({ available: false, enabled: false, session_id: null, questions: [] });
+    const queue = createAgentQueue(server.fetcher, { keepPolling: true });
     await queue.start();
-    const snap: QueueSnapshot = queue.snapshot();
-    expect(snap.phase).toBe('unavailable');
-    const html = renderToStaticMarkup(createElement(AgentPanelView, { snap, actions: noop }));
-    expect(html.match(/<button/g)).toHaveLength(1);
-    expect(html).toContain('disabled');
+    expect(queue.snapshot()).toMatchObject({ phase: 'unavailable', items: [], offline: false });
+    await vi.advanceTimersByTimeAsync(POLL_MS * 3);
+    expect(server.fetcher).toHaveBeenCalledTimes(1);
     queue.stop();
   });
 
-  it('renders labeled controls for answer and skip', () => {
-    const snap: QueueSnapshot = { phase: 'on', items: [item('q1')], popupId: null, error: null };
-    const html = renderToStaticMarkup(createElement(AgentPanelView, { snap, actions: noop }));
-    expect(html).toContain('>Answer</button>');
-    expect(html).toContain('>Skip</button>');
-    expect(html).toMatch(/<label for="agent-answer-q1"[^>]*>Your answer<\/label>/);
-    expect(html).not.toContain('autofocus');
+  it('with keepPolling, keeps polling while off and sees the agent turn on', async () => {
+    const server = fakeServer(reply([], { enabled: false, project: 'shop', event_count: 3, last_event_at: '2026-01-01T00:00:03.000Z' }));
+    const queue = createAgentQueue(server.fetcher, { keepPolling: true });
+    await queue.start();
+    expect(queue.snapshot()).toMatchObject({ phase: 'off', log: { project: 'shop', eventCount: 3, lastEventAt: '2026-01-01T00:00:03.000Z' } });
+    server.set(reply([], { enabled: false, project: 'shop', event_count: 5, last_event_at: null }));
+    await vi.advanceTimersByTimeAsync(POLL_MS);
+    expect(queue.snapshot().log.eventCount).toBe(5);
+    // Questions already open when the agent turns on go to the queue, not to a pop-up.
+    server.set(reply([item('q1')]));
+    await vi.advanceTimersByTimeAsync(POLL_MS);
+    expect(queue.snapshot()).toMatchObject({ phase: 'on', popupId: null });
+    expect(queue.snapshot().items.map((i) => i.id)).toEqual(['q1']);
+    await queue.setEnabled(false);
+    const after = server.fetcher.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(POLL_MS * 2);
+    expect(server.fetcher.mock.calls.length - after).toBe(2);
+    queue.stop();
+  });
+
+  it('marks a failed fetch offline, retries every 5 seconds, and clears it on the next answer', async () => {
+    let down = true;
+    const fetcher = vi.fn(async () => {
+      if (down) throw new Error('connection refused');
+      return { ok: true, json: async () => reply([item('q1')]) };
+    });
+    const queue = createAgentQueue(fetcher);
+    await queue.start();
+    expect(queue.snapshot()).toMatchObject({ phase: 'loading', offline: true });
+    expect(queue.snapshot().error).toMatch(/Retrying/);
+    await vi.advanceTimersByTimeAsync(POLL_MS);
+    expect(fetcher).toHaveBeenCalledTimes(2);
+    down = false;
+    await vi.advanceTimersByTimeAsync(POLL_MS);
+    expect(queue.snapshot()).toMatchObject({ phase: 'on', offline: false, error: null });
+    queue.stop();
+  });
+
+  it('says how to fix a failed save', async () => {
+    const fetcher = vi.fn(async (_url: string, init?: { method?: string }) => {
+      if (init?.method === 'POST') return { ok: false, json: async () => ({}) };
+      return { ok: true, json: async () => reply([item('q1')]) };
+    });
+    const queue = createAgentQueue(fetcher);
+    await queue.start();
+    await queue.answer('q1', 'x');
+    expect(queue.snapshot().error).toMatch(/try Answer again/);
+    await queue.setEnabled(false);
+    expect(queue.snapshot().error).toMatch(/Check that DevLens is running/);
+    queue.stop();
   });
 });
 
@@ -155,7 +162,7 @@ describe('agent route state', () => {
     vi.stubEnv('DEVLENS_PROJECT_DIR', '');
     try {
       const got = await (await GET()).json();
-      expect(got).toEqual({ available: false, enabled: false, session_id: null, questions: [] });
+      expect(got).toEqual({ available: false, enabled: false, session_id: null, questions: [], project: null, event_count: 0, last_event_at: null });
       const res = await POST(new Request('http://x/api/agent', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ type: 'opt_in', enabled: true }) }));
       expect(res.status).toBe(503);
       expect(applyPost(null, { type: 'opt_in', enabled: true }).status).toBe(503);
@@ -221,3 +228,40 @@ describe('agent route state', () => {
     expect(readFileSync(path.join(dir, '.devlens', 'events.jsonl'), 'utf8').trim().split('\n')).toHaveLength(1);
   });
 });
+
+describe('agent route session log facts', () => {
+  it('returns the project name and the latest session\'s event count, with the agent off', async () => {
+    const dir = project({ enabled: false }, [
+      ev('a1', 'old', 'prompt'), ev('a2', 'old', 'prompt'),
+      ev('b1', 'new', 'prompt', {}, { ts: '2026-01-01T00:00:05.000Z' }), ev('b2', 'new', 'stop', {}, { ts: '2026-01-01T00:00:09.000Z' }),
+    ]);
+    appendTorn(dir);
+    expect(sessionLogFacts(dir)).toEqual({ project: path.basename(dir), event_count: 2, last_event_at: '2026-01-01T00:00:09.000Z' });
+    vi.stubEnv('DEVLENS_PROJECT_DIR', dir);
+    try {
+      const got = await (await GET()).json();
+      // The agent fields keep their old meaning: off means no session and no questions.
+      expect(got).toEqual({ available: true, enabled: false, session_id: null, questions: [], project: path.basename(dir), event_count: 2, last_event_at: '2026-01-01T00:00:09.000Z' });
+    } finally { vi.unstubAllEnvs(); }
+  });
+
+  it('reports zero events for a project with no log yet, and nothing without a folder', () => {
+    const dir = project();
+    expect(sessionLogFacts(dir)).toEqual({ project: path.basename(dir), event_count: 0, last_event_at: null });
+    expect(sessionLogFacts(null)).toEqual({ project: null, event_count: 0, last_event_at: null });
+  });
+
+  it('keeps the agent fields when the agent is on', async () => {
+    const dir = project({ enabled: true }, [question('s')]);
+    vi.stubEnv('DEVLENS_PROJECT_DIR', dir);
+    try {
+      const got = await (await GET()).json();
+      expect(got).toMatchObject({ available: true, enabled: true, session_id: 's', event_count: 1 });
+      expect(got.questions.map((q: { id: string }) => q.id)).toEqual(['s:devlens_question:st1']);
+    } finally { vi.unstubAllEnvs(); }
+  });
+});
+
+function appendTorn(dir: string) {
+  writeFileSync(path.join(dir, '.devlens', 'events.jsonl'), `${readFileSync(path.join(dir, '.devlens', 'events.jsonl'), 'utf8')}{"id":"torn`, 'utf8');
+}
