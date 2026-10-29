@@ -46,11 +46,11 @@ Time now: 11:05 CDT · 4 h 25 min to freeze
 ## Evals
 | ID | REQ | Check | Method | Result |
 |---|---|---|---|---|
-| EVAL-1 | REQ-1 | With `t3 watch` running, a turn item added to a temp T3 database shows in `/api/journey` within 10 s | integration | not run |
-| EVAL-2 | REQ-1 | After the session ends, the watch output equals a one-shot `import` of the same thread (same event ids and payloads) | integration | not run |
-| EVAL-3 | REQ-3 | `isTestRun` accepts `cargo test`, `cargo test --offline`, `cd app && cargo test -- --nocapture`; rejects `cargo build`, `cargo run` | unit | not run |
-| EVAL-4 | REQ-3 | Status: `test result: ok` → passed; `test result: FAILED` → failed; `error: could not compile` → failed | unit | not run |
-| EVAL-5 | REQ-3, NOT-1 | Sandbox re-run of `cargo test --offline` on a tiny crate passes; the same run cannot read `~/.ssh`, reach the network, or write to `~/.cargo` | integration | not run |
+| EVAL-1 | REQ-1 | With `t3 watch` running, a turn item added to a temp T3 database shows in `/api/journey` within 10 s | integration | pass 2026-10-29, watch.test.ts |
+| EVAL-2 | REQ-1 | After the session ends, the watch output equals a one-shot `import` of the same thread (same event ids and payloads) | integration | pass 2026-10-29, watch.test.ts (byte-identical) |
+| EVAL-3 | REQ-3 | `isTestRun` accepts `cargo test`, `cargo test --offline`, `cd app && cargo test -- --nocapture`; rejects `cargo build`, `cargo run` | unit | pass 2026-10-29, t3.test.ts |
+| EVAL-4 | REQ-3 | Status: `test result: ok` → passed; `test result: FAILED` → failed; `error: could not compile` → failed | unit | pass 2026-10-29, capture.test.ts |
+| EVAL-5 | REQ-3, NOT-1 | Sandbox re-run of `cargo test --offline` on a tiny crate passes; the same run cannot read `~/.ssh`, reach the network, or write to `~/.cargo` | integration | pass 2026-10-29, rerun.test.ts; review pending |
 | EVAL-6 | REQ-4, NOT-3 | `t3 publish` uploads a capture; the anon key cannot read it; the hosted `/api/journey` lists and loads it | integration + hosted smoke | not run |
 | EVAL-7 | REQ-5, NOT-2 | The RPC reader yields the same events as the database reader for one thread, using read-only calls | integration | not run |
 | EVAL-8 | REQ-2 | Real take: every station cites real event ids; Uma's prompts have actor `developer`; provider and model shown | unit on the capture + human | not run |
@@ -82,17 +82,17 @@ Time now: 11:05 CDT · 4 h 25 min to freeze
 - Model: Claude (sonnet/medium)
 - Depends on: none
 - Files: `packages/t3/src/watch.ts` (new), `packages/t3/src/cli.ts`, `apps/web/recruiter/journey-section.tsx`, `packages/t3/tests/watch.test.ts`, `packages/t3/README.md`
-- [ ] `t3 watch --thread <id>` (or `--workspace <dir>` for the newest thread) polls the read-only database every 2 s and re-imports when the thread's last event sequence changes · Claude (sonnet/medium) · EVAL-1, EVAL-2 · revert the slice commit
-- [ ] `/recruiter` refetches a `t3:` source every 5 s while the capture says the session is running; shows "Live" · Claude (sonnet/medium) · EVAL-1 · revert
+- [x] `t3 watch --thread <id>` (or `--workspace <dir>` for the newest thread) polls the read-only database every 2 s and re-imports when the thread changes · Claude (sonnet/medium) · EVAL-1, EVAL-2 pass (watch.test.ts, 3 tests); live 10 s run on a real thread: 307 events, clean stop · revert 14ce723
+- [x] `/recruiter` refetches a `t3:` source every 5 s while the capture says the session is running; shows "Live" · Claude (sonnet/medium) · not checked in a browser yet · revert 14ce723
 
 ### Slice 2: Rust tests and sandbox
 - Covers: REQ-3, NOT-1
 - Model: Claude (opus/high), because it changes the sandbox
 - Depends on: Rust installed
 - Files: `packages/t3/src/map.ts`, `packages/capture/map-hook.ts`, `packages/link/src/rerun.ts`, their tests, `packages/t3/README.md`
-- [ ] Install rustup stable (no shell profile edits beyond rustup's own) · Claude · `cargo --version` · `rustup self uninstall`
-- [ ] `cargo test` detection and compile-error status · Claude (opus/high) · EVAL-3, EVAL-4 · revert
-- [ ] Read-only `~/.rustup` and `~/.cargo` for `cargo` re-runs only; `CARGO_TARGET_DIR` and `CARGO_HOME` writes inside the temp folder · Claude (opus/high) · EVAL-5 · revert
+- [x] Install rustup stable · Claude · cargo 1.99.1, rustc 1.99.1; rustup added `. "$HOME/.cargo/env"` to ~/.zshenv and ~/.profile · `rustup self uninstall`
+- [x] `cargo test` detection and compile-error status · Claude (opus/high) · EVAL-3, EVAL-4 pass (t3 18, capture 37 tests) · revert 14ce723
+- [x] Read-only `~/.rustup`, `~/.cargo/bin`, `~/.cargo/registry/{index,cache}`, `~/.cargo/git/db` for `cargo test` re-runs only; `CARGO_TARGET_DIR` and `CARGO_HOME` writes inside the temp folder · Claude (opus/high) · EVAL-5 pass (rerun 19 tests: home, ~/.ssh, ~/.cargo writes, loopback and 1.1.1.1 denied); serde crate offline re-run 4.3 s · revert 14ce723
 
 ### Slice 3: Hosted imports
 - Covers: REQ-4, NOT-3
