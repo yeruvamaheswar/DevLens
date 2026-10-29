@@ -16,9 +16,12 @@ Scope change: CR-11 in `plans/devlens.contract.md`. The Claude Code golden repla
 | Recruiter train line on `/recruiter` | built, unit tested, screenshot checked | 13 journey tests; headless Chrome screenshots of golden and T3 sources |
 | T3 adapter (read-only, `packages/t3`) | built, experimental, reviewed | 16 tests; real imports of 3 T3 threads; review `plans/t3-journey-review.md` (PASS WITH FIXES, all 8 fixed) |
 | SprintBoard demo app (`~/Code-Git-Repos/sprintboard-demo`, private GitHub repo) | built, verified | 31 tests; `check.mjs` 3 states match; live SQLite and Supabase API smoke |
-| T3 rehearsal on SprintBoard (agent-written prompts, Haiku 5.5) | real T3 chain captured | fail 400 → tempting fix → fail 0 of 3 → root fix → 26 pass; sandbox verify failed (no network for API tests), fixed by in-process tests |
+| T3 rehearsal 1 on SprintBoard (agent-written prompts, Haiku 5.5) | real T3 chain captured | fail 400 → tempting fix → fail 0 of 3 → root fix → 26 pass; sandbox verify failed (no network for API tests), fixed by in-process tests; capture discarded |
+| T3 rehearsal 2 on the new starter | real T3 chain, independently verified | fail 400 → fail 0 of 3 → 31 pass; sandbox re-run passed; rule-5 edges observed; saved as `examples/t3-captures/sprintboard-rehearsal` |
 | Live T3 SprintBoard take by Uma | waiting on Uma | |
-| Vercel deploy (DevLens, SprintBoard) | waiting on Vercel access approval | |
+| GitHub | pushed | DevLens `main` (public repo); `yeruvamaheswar/sprintboard-demo` created private, `main` and tag `starter` pushed |
+| Supabase table for SprintBoard | applied | `public.sprintboard_issues`, RLS on, no policies (server key only); seeded with 12 issues |
+| Vercel deploy (DevLens, SprintBoard) | blocked on Uma | install the Vercel GitHub app; approve the connector's team access |
 
 ## Why the recruiter line was missing
 
@@ -93,9 +96,18 @@ If the agent fixes everything in one run, the chain says "The first fix passed. 
 | 3:45 | Source switch | Click the verified Claude Code golden take. "Same page, a different capture tool." |
 | 4:05 | End | "Evidence, not a verdict." |
 
+## After the live take: show it on the hosted site
+
+```
+npm run t3 -- save --thread <thread id> --as sprintboard-live   # add --with-recording only if the video may be public
+git add examples/t3-captures/sprintboard-live && git commit -m "Save the live T3 take" && git push
+```
+
+The hosted `/recruiter` then lists it as `t3-saved:sprintboard-live`.
+
 ## Fallback
 
-If the T3 take is not ready or not clean, demo the verified golden take: `http://localhost:3000/recruiter?source=golden` and `/replay`. Say that the T3 adapter is experimental. The golden take needs no network: `npm run demo -- --offline`.
+If the live T3 take is not ready or not clean, two fallbacks exist. For T3: `/recruiter?source=t3-saved:sprintboard-rehearsal`, a real T3 session with agent-written prompts, labelled as such, independently re-run. For the verified path: the golden take, `http://localhost:3000/recruiter?source=golden` and `/replay`. Say that the T3 adapter is experimental. The golden take needs no network: `npm run demo -- --offline`.
 
 ## Test results (2026-10-29, this Mac)
 
