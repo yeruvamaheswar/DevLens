@@ -50,7 +50,7 @@ Time now: 11:05 CDT · 4 h 25 min to freeze
 | EVAL-2 | REQ-1 | After the session ends, the watch output equals a one-shot `import` of the same thread (same event ids and payloads) | integration | pass 2026-10-29, watch.test.ts (byte-identical) |
 | EVAL-3 | REQ-3 | `isTestRun` accepts `cargo test`, `cargo test --offline`, `cd app && cargo test -- --nocapture`; rejects `cargo build`, `cargo run` | unit | pass 2026-10-29, t3.test.ts |
 | EVAL-4 | REQ-3 | Status: `test result: ok` → passed; `test result: FAILED` → failed; `error: could not compile` → failed | unit | pass 2026-10-29, capture.test.ts |
-| EVAL-5 | REQ-3, NOT-1 | Sandbox re-run of `cargo test --offline` on a tiny crate passes; the same run cannot read `~/.ssh`, reach the network, or write to `~/.cargo` | integration | pass 2026-10-29, rerun.test.ts; review pending |
+| EVAL-5 | REQ-3, NOT-1 | Sandbox re-run of `cargo test --offline` on a tiny crate passes; the same run cannot read `~/.ssh`, reach the network, or write to `~/.cargo` | integration | pass 2026-10-29, rerun.test.ts; reviewed, bypass fixed in 6ae231a |
 | EVAL-6 | REQ-4, NOT-3 | `t3 publish` uploads a capture; the anon key cannot read it; the hosted `/api/journey` lists and loads it | integration + hosted smoke | not run |
 | EVAL-7 | REQ-5, NOT-2 | The RPC reader yields the same events as the database reader for one thread, using read-only calls | integration | not run |
 | EVAL-8 | REQ-2 | Real take: every station cites real event ids; Uma's prompts have actor `developer`; provider and model shown | unit on the capture + human | not run |
@@ -93,6 +93,9 @@ Time now: 11:05 CDT · 4 h 25 min to freeze
 - [x] Install rustup stable · Claude · cargo 1.99.1, rustc 1.99.1; rustup added `. "$HOME/.cargo/env"` to ~/.zshenv and ~/.profile · `rustup self uninstall`
 - [x] `cargo test` detection and compile-error status · Claude (opus/high) · EVAL-3, EVAL-4 pass (t3 18, capture 37 tests) · revert 14ce723
 - [x] Read-only `~/.rustup`, `~/.cargo/bin`, `~/.cargo/registry/{index,cache}`, `~/.cargo/git/db` for `cargo test` re-runs only; `CARGO_TARGET_DIR` and `CARGO_HOME` writes inside the temp folder · Claude (opus/high) · EVAL-5 pass (rerun 19 tests: home, ~/.ssh, ~/.cargo writes, loopback and 1.1.1.1 denied); serde crate offline re-run 4.3 s · revert 14ce723
+
+- [x] Independent review of slices 1-2 · Claude (sonnet/medium), separate session · PASS WITH FIXES: 2 Medium (live polling could stall; a crafted `cd . & …` step reached the Rust read exception), 5 Low. Fixed in 6ae231a with regression tests: strict `cd` steps in both detectors, crates.io-only registry reads, steady 5 s polling for `t3:` sources, change marker includes the thread's event stream and statuses, guarded compile rule. Serde crate re-run after the fix: passed, 2.3 s · revert 6ae231a
+- [ ] Review findings 5-6 (atomic writes in `runImport`, `--interval` validation) in `cli.ts`, after slice 3 releases the file · Claude · watch test + new unit test · revert
 
 ### Slice 3: Hosted imports
 - Covers: REQ-4, NOT-3
