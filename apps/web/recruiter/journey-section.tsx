@@ -49,6 +49,29 @@ export function JourneySection() {
     return () => controller.abort();
   }, [key]);
 
+  // While the capture is live (`t3 watch` stamped it in the last 15 s), refetch every 5 s. Keep the data and the chosen station on a failed or stale poll.
+  const live = data?.journey.source.live === true;
+  useEffect(() => {
+    if (!live) return;
+    const controller = new AbortController();
+    const timer = setInterval(() => {
+      fetch(`/api/journey?source=${encodeURIComponent(key)}`, { cache: 'no-store', signal: controller.signal })
+        .then(async (response) => {
+          if (!response.ok) throw new Error(String(response.status));
+          return response.json() as Promise<JourneyResponse>;
+        })
+        .then((body) => {
+          setData(body);
+          setSelected((current) => (current && body.journey.stations.some((item) => item.id === current) ? current : body.journey.stations[0]?.id ?? null));
+        })
+        .catch(() => undefined);
+    }, 5000);
+    return () => {
+      clearInterval(timer);
+      controller.abort();
+    };
+  }, [live, key]);
+
   const layout = useMemo(() => {
     if (!data) return null;
     const rerunOf = (id: string) => {
@@ -112,7 +135,8 @@ export function JourneySection() {
       {journey && layout ? (
         <>
           <p className={styles.provenance}>
-            <Chip kind={journey.source.status === 'verified' ? 'observed' : 'unknown'} text={journey.source.status === 'verified' ? 'Verified capture' : 'Experimental capture'} /> {journey.source.provenance_note}
+            <Chip kind={journey.source.status === 'verified' ? 'observed' : 'unknown'} text={journey.source.status === 'verified' ? 'Verified capture' : 'Experimental capture'} />{' '}
+            {live ? <span className={styles.liveChip} role="status">Live</span> : null} {journey.source.provenance_note}
           </p>
           <dl className={styles.facts}>
             {journeyFacts(journey).map((fact) => (

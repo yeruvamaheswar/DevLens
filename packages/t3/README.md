@@ -42,6 +42,7 @@ Run from the DevLens repo root. Output goes to `.devlens/t3/<thread>/` (git-igno
 |---|---|
 | `npm run t3 -- list --workspace <dir>` | Lists T3 threads for one project folder |
 | `npm run t3 -- import --thread <id>` | Maps the thread to `events.jsonl`, `edges.jsonl`, `capture.json` |
+| `npm run t3 -- watch --thread <id>` (or `--workspace <dir>`) | Live capture. Checks T3 every 2 s and re-imports the thread when it changes. Ctrl+C stops it |
 | `npm run t3 -- verify --thread <id>` | Sandbox re-run of the last passing test on a copy of the checkout, then re-import |
 | `npx tsx packages/t3/src/fetch-recording.ts --latest --thread <id>` | Copies the newest uploaded window take and its meta into the capture folder |
 | `npm run t3 -- save --thread <id> --as <name>` | Copies a capture into `examples/t3-captures/<name>/` with home paths as `~`, so it can be committed and shown by a hosted build. Add `--with-recording` only if the video may be public |
@@ -49,13 +50,23 @@ Run from the DevLens repo root. Output goes to `.devlens/t3/<thread>/` (git-igno
 
 Flags for `import`: `--recording <meta.json>` attaches media offsets (a `recording-meta.json` in the folder is used automatically), `--rerun <file>`, `--no-git` (skip checkpoint diffs), `--root <dir>` (paths relative to another folder), `--no-checkpoints`, `--db <path>`.
 
+## Live capture
+
+Run `watch` in a second terminal while a T3 session runs. Open `/recruiter` and pick the capture. It shows a "Live" chip and refreshes every 5 s.
+
+- `--thread <id>` watches one thread. `--workspace <dir>` watches the newest thread in that project and switches if a newer one starts. `--interval <ms>` changes the 2 s check.
+- Each check reads a cheap change marker (counts and newest times of the thread's rows) from the read-only database. When it changes, `watch` runs the same code as `import`. So a finished watch equals a one-shot `import`.
+- Each re-import and each read error goes to stderr with the time. A read error does not stop the watch.
+- Each check stamps `watch.updated_at` in `capture.json`, even with no change. The capture counts as live for 15 s after the last stamp.
+- A run that is still running at import is incomplete. The next change re-imports it.
+
 ## Event mapping
 
 | T3 item | DevLens event | Actor | Notes |
 |---|---|---|---|
 | `user_message`, `createdBy=user` | `prompt` | developer | Text kept word for word, then redacted |
 | `user_message`, `createdBy=agent` | `prompt` | agent | `attribution: agent_authored`. Never shown as the developer's words |
-| `command_execution` that is one test runner call (`npm test`, `npm run test:*`, `vitest`, `pytest`, `node --test`), after `cd` steps and an output tail | `test` | tool | Status from the output. If the output is unclear and the provider flags a failure: `failed`. If the output reads as a pass but the provider flags a failure: `unknown`. Both use `signal: provider_status` |
+| `command_execution` that is one test runner call (`npm test`, `npm run test:*`, `vitest`, `pytest`, `node --test`, `cargo test`), after `cd` steps and an output tail | `test` | tool | Status from the output. If the output is unclear and the provider flags a failure: `failed`. If the output reads as a pass but the provider flags a failure: `unknown`. Both use `signal: provider_status` |
 | other `command_execution` | `tool_call` | agent | Command and the first 1500 characters of output |
 | `file_change`, completed | `file_edit` | agent | Diff in the provider's shape: `old_new`, `written_content`, `unified`, or `not_exposed` |
 | `file_change`, failed | `tool_call` | agent | `applied: false`. Not counted as an edit |
@@ -66,6 +77,15 @@ Flags for `import`: `--recording <meta.json>` attaches media offsets (a `recordi
 | items with no native id (T3 bookkeeping) | not imported | | Counted as `internal` |
 
 Every event keeps the T3 thread, run, and turn-item ids, and the provider's own tool id (`tool_use_id`). The event id is `t3:<thread>:<turn item id>`, so a re-import replaces events instead of adding copies. Each event carries `payload.agent`: the provider instance, the model, and the options T3 recorded for that run.
+
+## Rust (`cargo test`)
+
+- `t3 verify` re-runs a `cargo test` in the sandbox. Run `cargo fetch` in the app first. The re-run works offline and never downloads crates.
+- For a `cargo test` command only, the sandbox may read `~/.rustup`, `~/.cargo/bin`, `~/.cargo/registry/index`, `~/.cargo/registry/cache`, and `~/.cargo/git/db`. It cannot write to them.
+- It cannot read the rest of `~/.cargo`, such as `credentials.toml` or `config.toml`. Network stays blocked, loopback included.
+- Cargo state and build output stay in the temp folder. The app's `target/` is not copied, so the first re-run compiles from scratch.
+- A cargo re-run times out after 5 minutes. Other re-runs time out after 30 seconds.
+- Not supported: custom `RUSTUP_HOME` or `CARGO_HOME`, source replacement in `~/.cargo/config.toml`. Git dependencies are untested.
 
 ## What this does not know
 

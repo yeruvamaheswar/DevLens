@@ -51,6 +51,7 @@ export type JourneySourceMeta = {
   unknowns: string[];
   not_captured: string[];
   media: { url: string; label: string } | null;
+  live?: boolean; // true while `t3 watch` stamped the capture in the last 15 s
 };
 
 export type Journey = {

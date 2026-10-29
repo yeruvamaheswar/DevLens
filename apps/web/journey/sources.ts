@@ -98,10 +98,17 @@ async function golden(): Promise<JourneyResponse> {
   return { journey: buildJourney({ events: replay.events, edges: replay.edges, source, questions }), events: replay.events.map(strip), edges: replay.edges };
 }
 
+// `t3 watch` stamps capture.json on every poll. A stamp under 15 s old means the session is being watched now.
+const LIVE_WINDOW_MS = 15_000;
+export function isLive(updatedAt: unknown, now: number = Date.now()): boolean {
+  const at = typeof updatedAt === 'string' ? Date.parse(updatedAt) : NaN;
+  return Number.isFinite(at) && now - at >= 0 && now - at < LIVE_WINDOW_MS;
+}
+
 function t3(key: string): JourneyResponse | null {
   const dir = captureDir(key);
   if (!dir) return null;
-  const capture = JSON.parse(readFileSync(path.join(dir, 'capture.json'), 'utf8')) as { label: string; unknowns: string[]; not_captured: string[]; t3: { title: string; workspace: string | null } };
+  const capture = JSON.parse(readFileSync(path.join(dir, 'capture.json'), 'utf8')) as { label: string; unknowns: string[]; not_captured: string[]; t3: { title: string; workspace: string | null }; watch?: { updated_at?: string } };
   const events = readJsonl<Event>(path.join(dir, 'events.jsonl'));
   const edges = readJsonl<Edge>(path.join(dir, 'edges.jsonl'));
   const hasVideo = existsSync(path.join(dir, 'recording.webm'));
@@ -113,6 +120,7 @@ function t3(key: string): JourneyResponse | null {
     provenance_note: 'Read from the T3 Code server’s local store by the DevLens T3 adapter (experimental, read-only). T3 records what each provider reported; DevLens did not hook the provider.',
     unknowns: capture.unknowns,
     not_captured: capture.not_captured,
+    live: isLive(capture.watch?.updated_at),
     media: hasVideo ? { url: `/api/journey/media?source=${encodeURIComponent(key)}`, label: 'Window recording of the T3 Code app. Audio and camera off.' } : null,
   };
   return { journey: buildJourney({ events, edges, source }), events: events.map(strip), edges };

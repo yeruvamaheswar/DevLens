@@ -1,7 +1,7 @@
-import { spawn } from 'node:child_process';
+import { execFileSync, spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { copyFile, lstat, mkdir, mkdtemp, readdir, readFile, realpath, appendFile, rm, writeFile } from 'node:fs/promises';
+import { copyFile, lstat, mkdir, mkdtemp, readdir, readFile, realpath, appendFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -17,12 +17,18 @@ import type { Event, TestPayload } from '../../core/event';
 //   - macOS sandbox-exec runs the command with a generated profile: no network, no file writes
 //     outside the temp dir, no reads of the home dir, the repo, the tmp roots, or the allowed root.
 //   - Without sandbox-exec the run is refused unless the caller passes allowUnisolated.
+//   - Rust exception, only when the command is one `cargo test` call (isCargoTestCommand): read-only
+//     ~/.rustup, ~/.cargo/bin, ~/.cargo/registry/{index,cache} and ~/.cargo/git/db. Nothing else in ~/.cargo
+//     (credentials.toml, config.toml) and no write to either. CARGO_HOME, the registry src folder, git
+//     checkouts and the target dir live in the temp dir; CARGO_NET_OFFLINE=true. Network stays denied.
 //
 // Process cleanup: the child runs in its own process group. On every completion path (exit, timeout,
 // error) the whole group gets SIGKILL and we wait until the group is gone before the temp dir is removed.
 // Limit: a descendant that calls setsid (or node's detached:true) leaves the group and is not killed.
 
 const DEFAULT_TIMEOUT_MS = 30_000;
+// A cargo re-run compiles every dependency from the registry cache (the checkout's target/ is not copied).
+const DEFAULT_CARGO_TIMEOUT_MS = 300_000;
 const DEFAULT_MAX_OUTPUT_BYTES = 32_768;
 const SANDBOX_EXEC = '/usr/bin/sandbox-exec';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
@@ -98,16 +104,86 @@ function skipCopy(name: string): boolean {
   return name === 'node_modules' || name === '.git' || name === '.devlens' || name === '.env' || name.startsWith('.env.');
 }
 
-async function copyTree(src: string, dest: string): Promise<void> {
+// skipCargoTarget: leave out a `target` folder that sits next to a Cargo.toml. Cargo rebuilds it in the temp dir.
+async function copyTree(src: string, dest: string, skipCargoTarget = false): Promise<void> {
   await mkdir(dest, { recursive: true });
   const entries = await readdir(src, { withFileTypes: true });
+  const crate = skipCargoTarget && entries.some((entry) => entry.isFile() && entry.name === 'Cargo.toml');
   for (const entry of entries) {
     if (skipCopy(entry.name) || entry.isSymbolicLink()) continue;
+    if (crate && entry.name === 'target' && entry.isDirectory()) continue;
     const from = path.join(src, entry.name);
     const to = path.join(dest, entry.name);
-    if (entry.isDirectory()) await copyTree(from, to);
+    if (entry.isDirectory()) await copyTree(from, to, skipCargoTarget);
     else if (entry.isFile()) await copyFile(from, to);
   }
+}
+
+// Same strictness as the T3 importer's test detection, and stricter about shell syntax: apart from `cd`
+// steps, env assignments, and an output tail such as `2>&1 | tail -20`, the command is one `cargo test` call
+// whose words hold no quotes, substitutions, or redirects. Only such a command gets the Rust read exception.
+const SAFE_WORD = /^[\w@%+=:,./-]+$/;
+const CARGO_TAIL = /\s*(?:2>&1\s*)?(?:\|\s*(?:tail|head|cat)(?:\s+-?\w+)*\s*)*$/;
+export function isCargoTestCommand(command: string): boolean {
+  if (/[\n\r`$<>()'"\\{}*?[\]!~#]/.test(command.replace(CARGO_TAIL, ''))) return false;
+  const steps = command.split(/&&|;|\|\|/).map((step) => step.trim()).filter(Boolean);
+  const work = steps.filter((step) => !/^cd(?:\s|$)/.test(step));
+  if (work.length !== 1) return false;
+  const words = work[0].replace(CARGO_TAIL, '').trim().split(/\s+/);
+  while (words.length > 0 && /^[A-Z_][A-Z0-9_]*=/.test(words[0])) words.shift();
+  return words[0] === 'cargo' && words[1] === 'test' && words.every((word) => SAFE_WORD.test(word));
+}
+
+type CargoAccess = { readOnly: string[]; env: Record<string, string>; path: string[] };
+
+// Inside the sandbox, xcrun cannot write its lookup cache (a per-user temp folder), so every `cc` call
+// does a slow full lookup and prints an error. Resolving the SDK and the compiler folder here, outside the
+// sandbox, took a serde crate's re-run from 21 s to 4 s. Speed only: without it the run still works.
+function xcodeTools(): { sdk: string; bin: string } | null {
+  if (process.platform !== 'darwin') return null;
+  try {
+    const ask = (args: string[]) => execFileSync('/usr/bin/xcrun', args, { encoding: 'utf8', timeout: 10_000, stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    const sdk = ask(['--show-sdk-path']);
+    const cc = ask(['-f', 'cc']);
+    return path.isAbsolute(sdk) && path.isAbsolute(cc) ? { sdk, bin: path.dirname(cc) } : null;
+  } catch {
+    return null; // No Xcode tools: rustc falls back to xcrun inside the sandbox (slower).
+  }
+}
+
+// Builds the temp CARGO_HOME: registry index and cache, and git db, are symlinks to the real read-only
+// folders. registry/src, git/checkouts, the package-cache lock, and the target dir are temp folders.
+async function cargoAccess(root: string): Promise<CargoAccess> {
+  const home = homedir();
+  const rustupHome = await realOrNull(path.join(home, '.rustup'));
+  const cargoReal = await realOrNull(path.join(home, '.cargo'));
+  const cargoHome = path.join(root, 'cargo-home');
+  await mkdir(path.join(cargoHome, 'registry', 'src'), { recursive: true });
+  await mkdir(path.join(cargoHome, 'git', 'checkouts'), { recursive: true });
+  const readOnly: string[] = [];
+  if (rustupHome) readOnly.push(rustupHome);
+  const bin = cargoReal ? await realOrNull(path.join(cargoReal, 'bin')) : null;
+  if (bin) readOnly.push(bin);
+  for (const shared of ['registry/index', 'registry/cache', 'git/db']) {
+    const real = cargoReal ? await realOrNull(path.join(cargoReal, shared)) : null;
+    if (!real) continue;
+    readOnly.push(real);
+    await symlink(real, path.join(cargoHome, shared));
+  }
+  // A read-only path must never cover the home folder, the repo, or the run (for example a symlinked ~/.cargo).
+  const guarded = [home, await realOrNull(home), repoRoot, await realOrNull(repoRoot), root].filter((p): p is string => p !== null);
+  if (readOnly.some((dir) => guarded.some((p) => p === dir || p.startsWith(`${dir}${path.sep}`)))) {
+    throw new Error('rerun refused: a Rust toolchain folder resolves to a place the sandbox must not read');
+  }
+  const env: Record<string, string> = {
+    CARGO_HOME: cargoHome,
+    CARGO_TARGET_DIR: path.join(root, 'cargo-target'),
+    CARGO_NET_OFFLINE: 'true',
+  };
+  if (rustupHome) env.RUSTUP_HOME = rustupHome;
+  const xcode = xcodeTools();
+  if (xcode) env.SDKROOT = xcode.sdk;
+  return { readOnly, env, path: [bin, xcode?.bin ?? null].filter((dir): dir is string => dir !== null) };
 }
 
 function sbString(value: string): string {
@@ -122,7 +198,9 @@ async function realOrNull(p: string): Promise<string | null> {
 // Later rules win in a sandbox profile, so the run's temp dir is allowed last.
 // Only file-read-data is denied: node must lstat the parents of its cwd (metadata, such as file names
 // existing, stays visible; contents and directory listings do not).
-export async function buildProfile(tempRoot: string, extraDeny: readonly string[]): Promise<string> {
+// readOnly: real paths the run may read but not write (the Rust exception). They are allowed after the denies.
+// file-read-data, not file-read*: on this macOS an `allow file-read*` does not override a `deny file-read-data`.
+export async function buildProfile(tempRoot: string, extraDeny: readonly string[], readOnly: readonly string[] = []): Promise<string> {
   const denyRaw = [homedir(), repoRoot, tmpdir(), '/tmp', '/private/tmp', '/var/tmp', '/private/var/tmp', ...extraDeny];
   const deny = new Set<string>();
   for (const raw of denyRaw) {
@@ -146,6 +224,7 @@ export async function buildProfile(tempRoot: string, extraDeny: readonly string[
     '(deny network*)',
     '(deny file-write*)',
     ...[...deny].map(denyRule),
+    ...readOnly.map((p) => `(allow file-read-data (subpath ${sbString(p)}))`),
     `(allow file-read* file-write* (subpath ${sbString(tempRoot)}))`,
     '(allow file-write* (literal "/dev/null") (literal "/dev/tty") (literal "/dev/dtracehelper"))',
   ];
@@ -220,7 +299,8 @@ export async function rerunTest(request: RerunRequest): Promise<Event> {
   if (!request.rerunOf) throw new Error('rerun needs a session test event id');
   if (!request.sessionId || !request.projectId) throw new Error('rerun needs a session and a project');
   if (!request.allowedRoot) throw new Error('rerun needs an allowed root');
-  const timeoutMs = request.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const cargo = isCargoTestCommand(command);
+  const timeoutMs = request.timeoutMs ?? (cargo ? DEFAULT_CARGO_TIMEOUT_MS : DEFAULT_TIMEOUT_MS);
   const maxOutputBytes = request.maxOutputBytes ?? DEFAULT_MAX_OUTPUT_BYTES;
   if (timeoutMs <= 0 || maxOutputBytes <= 0) throw new Error('rerun bounds must be positive');
   const isolated = sandboxExecAvailable();
@@ -233,12 +313,17 @@ export async function rerunTest(request: RerunRequest): Promise<Event> {
     const home = path.join(root, 'home');
     const work = path.join(root, 'work');
     await mkdir(home);
-    await copyTree(target, work);
+    await copyTree(target, work, cargo);
     const env = sandboxEnv(request.parentEnv ?? process.env, home);
+    const rust = cargo && isolated ? await cargoAccess(root) : null;
+    if (rust) {
+      Object.assign(env, rust.env);
+      env.PATH = [...rust.path, ...(env.PATH ? [env.PATH] : [])].join(path.delimiter);
+    }
     let result: RunResult;
     if (isolated) {
       const profile = path.join(root, 'sandbox.sb');
-      await writeFile(profile, await buildProfile(root, [request.allowedRoot]), 'utf8');
+      await writeFile(profile, await buildProfile(root, [request.allowedRoot], rust?.readOnly ?? []), 'utf8');
       result = await runBounded(SANDBOX_EXEC, ['-f', profile, '/bin/sh', '-c', command], work, env, timeoutMs, maxOutputBytes);
     } else {
       result = await runBounded('/bin/sh', ['-c', command], work, env, timeoutMs, maxOutputBytes);

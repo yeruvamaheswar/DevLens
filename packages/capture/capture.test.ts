@@ -299,6 +299,25 @@ describe('hook mapping', () => {
     expect(JSON.stringify(unknown)).not.toContain('exit_code');
   });
 
+  it('reads cargo test output (EVAL-4) and keeps node, vitest, and pytest results', () => {
+    const lib = 'running 1 test\ntest tests::adds ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n';
+    const doc = '   Doc-tests tiny\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n';
+    expect(testStatusFromOutput(lib)).toBe('passed');
+    expect(testStatusFromOutput(`${lib}\n     Running tests/api.rs\n\n${lib}\n${doc}`)).toBe('passed');
+    expect(testStatusFromOutput(doc)).toBe('unknown');
+    expect(testStatusFromOutput(`${lib}\ntest t::bad ... FAILED\n\ntest result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass \`--lib\`\n`)).toBe('failed');
+    expect(testStatusFromOutput('test result: FAILED. 0 passed; 0 failed; 0 ignored')).toBe('failed');
+    expect(testStatusFromOutput('error[E0308]: mismatched types\n --> src/lib.rs:1:21\n\nFor more information about this error, try `rustc --explain E0308`.\nerror: could not compile `f` (lib) due to 1 previous error\n')).toBe('failed');
+    expect(testStatusFromOutput('error[E0425]: cannot find value `x` in this scope\n --> src/lib.rs:2:5\n')).toBe('failed');
+    // A passing trybuild-style test may print an expected compiler error. The summary line decides.
+    expect(testStatusFromOutput(`error[E0308]: expected mismatch (from a ui test)\n${lib}`)).toBe('passed');
+    expect(testStatusFromOutput('ℹ tests 2\nℹ pass 2\nℹ fail 0')).toBe('passed');
+    expect(testStatusFromOutput('ℹ pass 1\nℹ fail 1')).toBe('failed');
+    expect(testStatusFromOutput(' Tests  1 failed | 2 passed (3)')).toBe('failed');
+    expect(testStatusFromOutput(' Test Files  3 passed (3)\n      Tests  12 passed (12)')).toBe('passed');
+    expect(testStatusFromOutput('======= 3 passed, 1 warning in 0.20s =======')).toBe('passed');
+  });
+
   it('keeps missing ids unknown and does not read a dotenv file from the hook', () => {
     const dir = tempDir();
     const eventsPath = path.join(dir, 'events.jsonl');

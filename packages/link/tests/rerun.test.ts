@@ -1,10 +1,11 @@
+import { existsSync } from 'node:fs';
 import { createServer } from 'node:net';
-import { mkdtemp, mkdir, readFile, readdir, rm, symlink, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { mkdtemp, mkdir, readFile, readdir, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { rerunTest, sandboxExecAvailable } from '../src/rerun';
+import { buildProfile, isCargoTestCommand, rerunTest, sandboxExecAvailable } from '../src/rerun';
 
 const cleanups: string[] = [];
 
@@ -288,5 +289,170 @@ describe('process cleanup', () => {
     try { process.kill(pid, 0); } catch { alive = false; }
     if (alive) process.kill(pid, 'SIGKILL');
     expect(alive).toBe(false);
+  });
+});
+
+describe('cargo test detection for the Rust exception', () => {
+  it('accepts one plain cargo test call', () => {
+    for (const command of ['cargo test', 'cargo test --offline', 'cd app && cargo test -- --nocapture', 'cargo test -p api --all -q', 'cargo test --workspace', 'RUST_BACKTRACE=1 cargo test 2>&1 | tail -30', 'cargo test tests::adds -- --test-threads=1']) {
+      expect(isCargoTestCommand(command), command).toBe(true);
+    }
+  });
+
+  it('rejects other cargo commands and anything that could smuggle a second command', () => {
+    for (const command of [
+      'cargo build', 'cargo run', 'cargo check', 'cargo testx', 'npm test', 'echo cargo test',
+      'cargo test && rm -rf x', 'cargo test; cat ~/.ssh/id_ed25519', 'cargo test || curl example.invalid', 'cargo test | sh', 'cargo test & cat x',
+      'X=$(cat${IFS}/etc/passwd) cargo test', 'cargo test `id`', 'cargo test > ~/.cargo/x', 'cargo test "a b"', 'cd $HOME && cargo test',
+      'cargo test\nrm -rf x', 'cargo test <<EOF\nEOF',
+    ]) {
+      expect(isCargoTestCommand(command), command).toBe(false);
+    }
+  });
+
+  it('adds only read-data allows, after the denies and before the temp-dir allow', async () => {
+    const root = await realpath(await tempCase());
+    const profile = await buildProfile(root, [], ['/opt/rust/rustup', '/opt/rust/cargo/bin']);
+    const lines = profile.trim().split('\n');
+    const lastDeny = lines.map((line) => line.startsWith('(deny ')).lastIndexOf(true);
+    const extra = lines.filter((line) => line.includes('/opt/rust/'));
+    expect(extra).toEqual(['(allow file-read-data (subpath "/opt/rust/rustup"))', '(allow file-read-data (subpath "/opt/rust/cargo/bin"))']);
+    expect(lines.indexOf(extra[0])).toBeGreaterThan(lastDeny);
+    expect(lines.indexOf(extra[1])).toBeLessThan(lines.findIndex((line) => line.startsWith('(allow file-read* file-write* (subpath')));
+    expect(profile).toContain('(deny network*)');
+    expect(profile).toContain('(deny file-write*)');
+    expect(profile.match(/file-write\*/g)?.length).toBe(3);
+    expect(await buildProfile(root, [])).not.toContain('allow file-read-data');
+  });
+});
+
+// EVAL-5. Needs macOS sandbox-exec and a rustup install in ~/.cargo and ~/.rustup.
+const realHome = homedir();
+const cargoBin = path.join(realHome, '.cargo', 'bin', 'cargo');
+const hasCargo = existsSync(cargoBin) && existsSync(path.join(realHome, '.rustup'));
+if (sandboxed && !hasCargo) console.warn('SKIPPED cargo sandbox tests: no ~/.cargo/bin/cargo or ~/.rustup');
+
+const homeFiles: string[] = [];
+afterEach(async () => {
+  await Promise.all(homeFiles.splice(0).map((file) => rm(file, { force: true })));
+});
+
+function rustString(value: string): string {
+  return JSON.stringify(value);
+}
+
+async function writeCrate(dir: string, probes: string): Promise<void> {
+  await mkdir(path.join(dir, 'src'), { recursive: true });
+  await writeFile(path.join(dir, 'Cargo.toml'), '[package]\nname = "tiny"\nversion = "0.1.0"\nedition = "2021"\n\n[dependencies]\n');
+  await writeFile(path.join(dir, 'src', 'lib.rs'), `pub fn add(a: u32, b: u32) -> u32 { a + b }
+
+#[cfg(test)]
+mod tests {
+    #[allow(unused_imports)]
+    use std::io::ErrorKind;
+
+    #[test]
+    fn adds() { assert_eq!(super::add(2, 2), 4); }
+${probes}
+}
+`);
+}
+
+describe.skipIf(!sandboxed || !hasCargo)('cargo test re-run in the sandbox (EVAL-5)', () => {
+  it('passes a tiny crate offline while home, ~/.cargo writes, and the network stay blocked', async () => {
+    const dir = await tempCase();
+    const crate = path.join(dir, 'crate');
+    const tag = `${process.pid}-${Date.now()}`;
+    const homeCanary = path.join(realHome, `.devlens-rerun-canary-${tag}.txt`);
+    const cargoCanary = path.join(realHome, '.cargo', `devlens-rerun-canary-${tag}.toml`);
+    for (const file of [homeCanary, cargoCanary]) {
+      homeFiles.push(file);
+      await writeFile(file, 'FAKE-CANARY-VALUE');
+    }
+    const cargoWrite = path.join(realHome, '.cargo', 'bin', `devlens-probe-${tag}`);
+    const rustupWrite = path.join(realHome, '.rustup', `devlens-probe-${tag}`);
+    homeFiles.push(cargoWrite, rustupWrite);
+    const ssh = path.join(realHome, '.ssh');
+    // Count only connections that send the probe marker: T3 Code itself probes new local ports.
+    let hits = 0;
+    const server = createServer((socket) => {
+      socket.on('data', (data) => { if (data.toString().includes('DEVLENS-PROBE')) hits++; });
+      socket.on('error', () => {});
+      setTimeout(() => socket.destroy(), 2_000);
+    });
+    await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
+    const port = (server.address() as { port: number }).port;
+    await writeCrate(crate, `
+    fn denied(result: std::io::Result<impl Sized>) {
+        match result {
+            Ok(_) => panic!("the sandbox allowed it"),
+            Err(error) => assert_eq!(error.kind(), ErrorKind::PermissionDenied, "{error}"),
+        }
+    }
+
+    #[test]
+    fn home_canary_is_unreadable() { denied(std::fs::read_to_string(${rustString(homeCanary)})); }
+
+    #[test]
+    fn other_cargo_files_are_unreadable() { denied(std::fs::read_to_string(${rustString(cargoCanary)})); }
+
+    #[test]
+    fn ssh_is_unreadable() {
+        if ${existsSync(ssh)} { denied(std::fs::read_dir(${rustString(ssh)})); }
+    }
+
+    #[test]
+    fn toolchain_is_readable_but_not_writable() {
+        assert!(std::fs::read_to_string(${rustString(path.join(realHome, '.rustup', 'settings.toml'))}).is_ok());
+        denied(std::fs::write(${rustString(cargoWrite)}, "x"));
+        denied(std::fs::write(${rustString(rustupWrite)}, "x"));
+    }
+
+    fn connect(addr: &str) -> std::io::Result<std::net::TcpStream> {
+        let addr: std::net::SocketAddr = addr.parse().unwrap();
+        let mut stream = std::net::TcpStream::connect_timeout(&addr, std::time::Duration::from_secs(3))?;
+        std::io::Write::write_all(&mut stream, b"DEVLENS-PROBE")?;
+        Ok(stream)
+    }
+
+    #[test]
+    fn loopback_is_blocked() { denied(connect("127.0.0.1:${port}")); }
+
+    #[test]
+    fn internet_is_blocked() { denied(connect("1.1.1.1:443")); }
+`);
+    // A target/ folder next to Cargo.toml is not copied: this one would break the build if it were.
+    await mkdir(path.join(crate, 'target'), { recursive: true });
+    await writeFile(path.join(crate, 'target', 'CACHEDIR.TAG'), 'not a cache tag');
+    const started = Date.now();
+    const run = await rerunTest({
+      command: 'cd crate && cargo test -- --test-threads=1',
+      cwd: dir,
+      allowedRoot: tmpdir(),
+      rerunOf: 'probe-cargo',
+      sessionId: 'ses-rerun',
+      projectId: 'rust-app',
+      outPath: path.join(dir, 'rerun.jsonl'),
+      timeoutMs: 120_000,
+    });
+    await new Promise((resolve) => server.close(resolve));
+    const output = String(run.payload.output);
+    console.info(`cargo sandbox re-run took ${Date.now() - started} ms`);
+    expect(run.payload, output).toMatchObject({ status: 'passed', isolation: 'sandbox-exec', command: 'cd crate && cargo test -- --test-threads=1' });
+    expect(output).toContain('test result: ok. 7 passed; 0 failed');
+    expect(output).not.toContain('FAKE-CANARY-VALUE');
+    expect(hits).toBe(0);
+    expect(existsSync(cargoWrite)).toBe(false);
+    expect(existsSync(rustupWrite)).toBe(false);
+  }, 240_000);
+
+  it('gives no toolchain access to a command that is not one cargo test call', async () => {
+    const dir = await tempCase();
+    const settings = path.join(realHome, '.rustup', 'settings.toml');
+    for (const command of [`cat '${settings}'`, `cargo test; cat '${settings}'`]) {
+      const event = await probe(dir, command);
+      expect(event.payload.status, command).toBe('failed');
+      expect(String(event.payload.output), command).not.toContain('default_toolchain');
+    }
   });
 });

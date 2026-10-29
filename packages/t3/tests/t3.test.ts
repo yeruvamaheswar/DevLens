@@ -220,6 +220,50 @@ describe('T3 test detection (review finding 1 and 7)', () => {
     }
   });
 
+  it('counts a single cargo test call as a test run (EVAL-3)', () => {
+    for (const command of [
+      'cargo test',
+      'cargo test --offline',
+      'cd app && cargo test -- --nocapture',
+      'cargo test -p api --all',
+      'cargo test --workspace -q',
+      'RUST_BACKTRACE=1 cargo test 2>&1 | tail -30',
+      'cd /work/rust-app && cargo test tests::adds -- --test-threads=1',
+    ]) {
+      expect(isTestRun(command), command).toBe(true);
+    }
+    for (const command of [
+      'cargo build',
+      'cargo run',
+      'cargo check',
+      'cargo test && rm -rf x',
+      'cargo build && cargo test',
+      'cargo testx',
+      'echo cargo test',
+      'cargo test | sh',
+      'cat > src/lib.rs <<EOF\nfn main() {}\nEOF\ncargo test',
+    ]) {
+      expect(isTestRun(command), command).toBe(false);
+    }
+  });
+
+  it('maps cargo test output to a status (EVAL-4)', () => {
+    const snap = snapshot();
+    const ok = 'running 1 test\ntest tests::adds ... ok\n\ntest result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n';
+    const failed = 'test t::bad ... FAILED\n\ntest result: FAILED. 1 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\nerror: test failed, to rerun pass `--lib`\n';
+    const compile = 'error[E0308]: mismatched types\n --> src/lib.rs:1:21\n\nerror: could not compile `api` (lib test) due to 1 previous error\n';
+    snap.items = [
+      item(1, 'command_execution', { input: 'cargo test', output: ok, exitCode: 0 }),
+      item(2, 'command_execution', { input: 'cargo test', output: failed, exitCode: 101 }),
+      item(3, 'command_execution', { input: 'cd app && cargo test', output: compile, exitCode: 101 }),
+      item(4, 'command_execution', { input: 'cargo build', output: compile, exitCode: 101 }),
+    ];
+    snap.checkpoints = [];
+    const { events } = mapThread(snap);
+    expect(events.map((event) => [event.type, event.payload.status])).toEqual([['test', 'passed'], ['test', 'failed'], ['test', 'failed'], ['tool_call', undefined]]);
+    expect(events[2].payload).toMatchObject({ signal: 'output_parse' });
+  });
+
   it('does not claim a pass when the provider says the command failed', () => {
     const snap = snapshot();
     snap.items = [item(1, 'command_execution', { input: 'npm test', output: 'ℹ pass 10\nℹ fail 0' }, { status: 'failed' })];

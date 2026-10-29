@@ -124,7 +124,7 @@ export function diffOf(diffStr: unknown, root: string | null): { diff: string | 
   return { diff: null, format: 'not_exposed' };
 }
 
-const RUNNER = /^(?:npm\s+(?:test|t|run\s+test[\w:.-]*)|npx\s+(?:vitest|jest)|vitest|jest|pytest|python3?\s+-m\s+pytest|node\s+(?:--[\w=.-]+\s+)*--test)(?:\s|$)/;
+const RUNNER = /^(?:npm\s+(?:test|t|run\s+test[\w:.-]*)|npx\s+(?:vitest|jest)|vitest|jest|pytest|python3?\s+-m\s+pytest|node\s+(?:--[\w=.-]+\s+)*--test|cargo\s+test)(?:\s|$)/;
 const OUTPUT_TAIL = /\s*(?:2>&1\s*)?(?:\|\s*(?:tail|head|cat)\b[^|]*)*$/;
 
 // T3 shells run long compound scripts. A command counts as a test run only when, apart from
