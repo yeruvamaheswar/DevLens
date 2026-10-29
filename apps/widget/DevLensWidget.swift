@@ -265,7 +265,7 @@ let fallbackHTML = """
   body { display: flex; align-items: center; justify-content: center;
          font: 500 13px -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif; }
   .pill { box-sizing: border-box; width: 100%; height: 100%; display: flex; align-items: center;
-          gap: 8px; padding: 0 14px; border-radius: 22px; background: #111214;
+          gap: 8px; padding: 0 14px; border-radius: 0; background: #111214;
           border: 1px solid #2a2c30; color: #e6e6e6; -webkit-user-select: none; cursor: default; }
   .dot { width: 8px; height: 8px; border-radius: 50%; background: #6b6f76; flex: none; }
 </style></head>
@@ -284,6 +284,12 @@ guard let pageURL = URL(string: urlString), pageURL.scheme != nil else {
 
 let app = NSApplication.shared
 app.setActivationPolicy(.accessory)
+
+// Launching makes this process frontmost once. Hand focus straight back to the app the developer was in (NOT-11).
+let previousFront = NSWorkspace.shared.frontmostApplication
+DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+    if let previous = previousFront, previous.processIdentifier != getpid() { previous.activate() }
+}
 
 // Quit cleanly on SIGTERM and SIGINT.
 var signalSources: [DispatchSourceSignal] = []
