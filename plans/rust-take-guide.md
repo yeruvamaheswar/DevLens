@@ -9,7 +9,9 @@ Check these. If one fails, use the fix.
 
 | Check | How | Fix |
 |---|---|---|
-| DevLens runs | Open http://localhost:3000/record. It loads. | In a terminal: `cd ~/Code-Git-Repos/DevLens && DEVLENS_RECORD_ENABLED=1 npm run demo` |
+| DevLens runs | Open http://localhost:3000/record. It loads. | In a terminal: `cd ~/Code-Git-Repos/DevLens && DEVLENS_RECORD_ENABLED=1 DEVLENS_PROJECT_DIR=~/Code-Git-Repos/rust-supabase-take npm run demo` |
+| DevLens is pointed at the app | The DevLens terminal was started with `DEVLENS_RECORD_ENABLED=1 DEVLENS_PROJECT_DIR=~/Code-Git-Repos/rust-supabase-take npm run demo`. http://localhost:3000/agent shows the project **rust-supabase-take**. | Restart DevLens with that command. |
+| Question widget runs | In a third terminal: `cd ~/Code-Git-Repos/DevLens && DEVLENS_URL=http://localhost:3000/agent npm run widget`. A small DevLens window appears bottom right. | Without it, questions still land on http://localhost:3000/agent. |
 | Live capture runs | In a second terminal: `cd ~/Code-Git-Repos/DevLens && npm run t3 -- watch --workspace ~/Code-Git-Repos/rust-supabase-take`. It prints `no T3 thread found yet`. | Leave it open. |
 | Rust works | `cargo --version` prints 1.99 or higher. | Open a new terminal. Rust was installed today. |
 | App folder is clean | `~/Code-Git-Repos/rust-supabase-take` holds only `.git`, `.gitignore`, `.env`. | Do not add code yourself. |
@@ -40,7 +42,7 @@ Audio and camera stay off. DevLens records one window only.
    Build a small full-stack expense tracker in this empty folder. Use Rust with axum for a JSON API, a plain HTML/JS page in public/, and a repository trait with an in-memory version and a Supabase (PostgREST) version. Write the table SQL to supabase/001_expenses.sql and do not apply it. Write cargo test tests that run offline with the in-memory repository. Run cargo test.
    ```
 
-7. **Wait for the run to end.** Read what the agent did. Say what you think out loud only if you like. Audio is off.
+7. **Wait for the run to end.** Read what the agent did. Within about 30 seconds of the run ending, DevLens may ask a question in the widget. Answer it or skip it. It never asks at every run, and it asks nothing if it has no grounded question.
 8. **If a test fails**, send prompt 2:
 
    ```

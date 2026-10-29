@@ -23,6 +23,7 @@ import { rerunTest } from '../../link/src/rerun';
 import { startWatch } from './watch';
 import { captureBucketFromEnv, defaultPublishName, publishCapture } from './publish';
 import { readThreadViaRpc } from './rpc';
+import { bridgeQuestions } from './bridge';
 import type { T3ThreadSnapshot } from './store';
 
 type Args = { command: string; flags: Map<string, string | true> };
@@ -277,13 +278,27 @@ async function watch(args: Args): Promise<void> {
   if (!thread && !workspace) throw new Error('watch needs --thread <id> or --workspace <dir>.');
   const dbPath = flag(args, 'db') ?? DEFAULT_T3_DB;
   const intervalMs = parseInterval(args.flags.get('interval'));
+  const askedAt = new Set<string>();
   const watcher = startWatch({
     db: dbPath,
     thread: thread ?? undefined,
     workspace: workspace ?? undefined,
     outDir: (threadId) => outDir(args, threadId),
     intervalMs,
-    importOnce: (threadId) => ({ events: runImport(importOptions(args, threadId)).events.length }),
+    importOnce: (threadId) => {
+      const result = runImport(importOptions(args, threadId));
+      // Questions: when a T3 run completes, start the DevLens question agent, as Claude Code's Stop hook does.
+      const root = threadRoot(args, threadId);
+      if (root) {
+        try {
+          const bridged = bridgeQuestions({ root, events: result.events, runs: result.capture.runs, started: askedAt });
+          if (bridged.started.length) console.error(`${new Date().toISOString()} question agent started for ${bridged.started.join(', ')}`);
+        } catch (error) {
+          console.error(`${new Date().toISOString()} question bridge error: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+      return { events: result.events.length };
+    },
   });
   process.once('SIGINT', () => void watcher.stop());
   process.once('SIGTERM', () => void watcher.stop());

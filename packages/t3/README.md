@@ -79,6 +79,14 @@ Run `watch` in a second terminal while a T3 session runs. Open `/recruiter` and 
 
 Every event keeps the T3 thread, run, and turn-item ids, and the provider's own tool id (`tool_use_id`). The event id is `t3:<thread>:<turn item id>`, so a re-import replaces events instead of adding copies. Each event carries `payload.agent`: the provider instance, the model, and the options T3 recorded for that run.
 
+## Questions during a T3 session
+
+- Claude Code starts the DevLens question agent from its Stop hook. T3 has no hooks, so `t3 watch` does it: when a T3 run completes, it copies the thread's events into `<app>/.devlens/events.jsonl` and starts the same agent once for that run.
+- Opt-in is the same file as for Claude Code: `<app>/.devlens/agent.json` with `{"enabled":true}`. Without it, nothing is copied or started.
+- Point DevLens at the app (`DEVLENS_PROJECT_DIR=<app> npm run demo`), then run the widget with `DEVLENS_URL=http://localhost:3000/agent npm run widget`.
+- A question must cite one of the developer's own prompts. A session whose prompts an agent wrote gets no questions.
+- Add `.devlens/` to the app's `.gitignore`, or T3's checkpoints record DevLens's files as unattributed changes.
+
 ## Supported RPC reader
 
 - `packages/t3/src/rpc.ts` reads a thread from the running T3 server through its authenticated WebSocket RPC instead of the database. Use it with `npm run t3 -- import --thread <id> --via rpc`.
