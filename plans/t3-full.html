@@ -210,7 +210,7 @@ footer{margin-top:3.5rem;padding-top:.8rem;border-top:1px solid var(--rule);font
 }
 </style>
 </head>
-<body data-hash="7d041d20ca6f" data-repo="DevLens">
+<body data-hash="6934a64f4c52" data-repo="DevLens">
 <script type="text/plain" id="src">---
 kind: plan
 title: T3 Code adapter, from experimental to verified (CR-12)
@@ -318,6 +318,7 @@ Time now: 11:05 CDT · 4 h 25 min to freeze
 - [x] Private bucket `t3-captures`, RLS on, no public policies · Claude (opus/medium) · migration 20261029120000 applied; anon key: download, list, signed URL, upload all refused; advisor adds nothing · drop the bucket
 - [x] `t3 publish --thread <id>` uploads events, edges, capture, and the recording only with `--with-recording` · Claude (opus/medium) · publish.test.ts 8 tests; rehearsal 2 published as `rehearsal-2-sprintboard` · delete objects
 - [x] `/api/journey` lists published captures server-side (`t3-pub:<id>`) · Claude (opus/medium) · `next start` on 3200: listed and loaded (9 events, 16 edges); traversal keys 404; recording via 10-minute signed URL; build and check:bundle pass. Review running · revert 15955a0
+- [x] Independent review of slice 3 · Claude (sonnet/medium), separate session · PASS WITH FIXES (1 Medium: no timeout and offline runs still reached Supabase; 3 Low). Fixed in cbb4ca8: 5 s storage timeout, no published captures in a local `DEVLENS_OFFLINE=1` run, upload refused when a file holds a secret value; re-publish caveat documented. publish tests 10 pass, build and check:bundle pass · revert cbb4ca8
 - [ ] Add `SUPABASE_SECRET_KEY` and `NEXT_PUBLIC_SUPABASE_URL` to Vercel project `devlens` · user · hosted smoke · remove the vars
 
 ### Slice 4: Supported RPC reader
@@ -367,7 +368,7 @@ Time now: 11:05 CDT · 4 h 25 min to freeze
     <div><span class="lbl">Status</span><div class="val" id="status"></div></div>
     <div><span class="lbl">Dated</span><div class="val" id="dated"></div></div>
     <div><span class="lbl">Entries done</span><div class="val" id="count"></div></div>
-    <div><span class="lbl">Page</span><div class="val hash">7d041d20ca6f</div></div>
+    <div><span class="lbl">Page</span><div class="val hash">6934a64f4c52</div></div>
   </header>
   <div class="layout">
     <nav class="contents" aria-label="Contents"><span class="lbl">Contents</span><ol id="toc"></ol></nav>
@@ -375,7 +376,7 @@ Time now: 11:05 CDT · 4 h 25 min to freeze
       <div class="gutter" id="gutter" aria-hidden="true"></div>
       <section id="brief" class="sec" style="margin-top:0" aria-label="Brief"></section>
       <div id="sections"></div>
-      <footer>Generated from plans/t3-full.md in DevLens by md-view.sh · built 2026-10-29 11:49 · page 7d041d20ca6f (source + template). Agents: edit t3-full.md, then rebuild. Never edit this page.</footer>
+      <footer>Generated from plans/t3-full.md in DevLens by md-view.sh · built 2026-10-29 11:50 · page 6934a64f4c52 (source + template). Agents: edit t3-full.md, then rebuild. Never edit this page.</footer>
     </main>
   </div>
 </div>

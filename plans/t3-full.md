@@ -105,6 +105,7 @@ Time now: 11:05 CDT · 4 h 25 min to freeze
 - [x] Private bucket `t3-captures`, RLS on, no public policies · Claude (opus/medium) · migration 20261029120000 applied; anon key: download, list, signed URL, upload all refused; advisor adds nothing · drop the bucket
 - [x] `t3 publish --thread <id>` uploads events, edges, capture, and the recording only with `--with-recording` · Claude (opus/medium) · publish.test.ts 8 tests; rehearsal 2 published as `rehearsal-2-sprintboard` · delete objects
 - [x] `/api/journey` lists published captures server-side (`t3-pub:<id>`) · Claude (opus/medium) · `next start` on 3200: listed and loaded (9 events, 16 edges); traversal keys 404; recording via 10-minute signed URL; build and check:bundle pass. Review running · revert 15955a0
+- [x] Independent review of slice 3 · Claude (sonnet/medium), separate session · PASS WITH FIXES (1 Medium: no timeout and offline runs still reached Supabase; 3 Low). Fixed in cbb4ca8: 5 s storage timeout, no published captures in a local `DEVLENS_OFFLINE=1` run, upload refused when a file holds a secret value; re-publish caveat documented. publish tests 10 pass, build and check:bundle pass · revert cbb4ca8
 - [ ] Add `SUPABASE_SECRET_KEY` and `NEXT_PUBLIC_SUPABASE_URL` to Vercel project `devlens` · user · hosted smoke · remove the vars
 
 ### Slice 4: Supported RPC reader
