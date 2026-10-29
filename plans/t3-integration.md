@@ -22,7 +22,7 @@ Scope change: CR-11 in `plans/devlens.contract.md`. The Claude Code golden repla
 | GitHub | pushed | DevLens `main` (public repo); `yeruvamaheswar/sprintboard-demo` created private, `main` and tag `starter` pushed |
 | Supabase table for SprintBoard | applied | `public.sprintboard_issues`, RLS on, no policies (server key only); seeded with 12 issues |
 | Vercel: DevLens | deployed, checked | Project `devlens`, Git-connected to `main`, Vercel login on all deployments. https://devlens-ashen.vercel.app (anonymous visit: 302 to Vercel login). Logged-in fetch: `/recruiter` 200; `/api/journey` lists golden and `t3-saved:sprintboard-rehearsal`; both journeys 200, 31 and 9 events, all 7 chain steps for golden, no home paths. `DEVLENS_OFFLINE=1`, no secrets, uploads off |
-| Vercel: SprintBoard | deployed, waiting on the database key | Project `sprintboard-demo`, Git-connected to `main`, Vercel login on all deployments. https://sprintboard-demo-phi.vercel.app: page 200; `/api/issues` reaches the function and answers 503 `store_not_configured` until `SUPABASE_SECRET_KEY` is set in Vercel |
+| Vercel: SprintBoard | deployed, checked | Project `sprintboard-demo`, Git-connected to `main`, Vercel login on all deployments. https://sprintboard-demo-phi.vercel.app: page 200. With `SUPABASE_SECRET_KEY` (Secret) set by Uma: `/api/issues?status=open` 200 with 5 issues, `/api/stats` 12 (5 open, 3 in progress, 4 completed), `?status=in-progress` 400 (the starter bug). Create and edit not run on the hosted site |
 
 ## Why the recruiter line was missing
 
@@ -130,5 +130,4 @@ Independent review: Sonnet 5.5, a different session (`plans/t3-journey-review.md
 ## Open
 
 - Uma: the live T3 take, the Loom, and the Airtable form.
-- Uma: add `SUPABASE_SECRET_KEY` (Sensitive, Production and Preview) to the Vercel project `sprintboard-demo`, then redeploy.
 - Hosted video route `/api/replay/media`: answered with a large body; status code not checked.
