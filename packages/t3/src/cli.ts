@@ -5,6 +5,7 @@
 //   npx tsx packages/t3/src/cli.ts verify --thread <id>   (sandbox re-run of the last passing test, then re-import)
 //   --root <dir>: paths relative to <dir> instead of the thread's checkout. --no-checkpoints: leave T3 git checkpoints out.
 //   npx tsx packages/t3/src/cli.ts save --thread <id> --as <name> [--with-recording]   (copy into examples/t3-captures/<name>, home paths as ~)
+//   npx tsx packages/t3/src/cli.ts publish --thread <id> [--as <name>] [--with-recording]   (upload to the private t3-captures bucket for the hosted journey)
 // Output (default .devlens/t3/<thread>/, git-ignored): events.jsonl, edges.jsonl, capture.json.
 // A recording-meta.json or rerun.jsonl already in that folder is used again on re-import.
 import { execFileSync } from 'node:child_process';
@@ -20,6 +21,7 @@ import { DEFAULT_T3_DB, listThreads, openT3, readThread } from './store';
 import { mapThread } from './map';
 import { rerunTest } from '../../link/src/rerun';
 import { startWatch } from './watch';
+import { captureBucketFromEnv, defaultPublishName, publishCapture } from './publish';
 
 type Args = { command: string; flags: Map<string, string | true> };
 
@@ -272,6 +274,20 @@ function save(args: Args): void {
   console.log(`Saved ${threadId} as examples/t3-captures/${name}${args.flags.has('with-recording') ? ' with its recording' : ' without its recording'}. Review it before you commit: it will be public if the repo is.`);
 }
 
+// A published capture lives in private storage, so the hosted journey shows it without a Git push. Server key only.
+async function publish(args: Args): Promise<void> {
+  const threadId = flag(args, 'thread');
+  if (!threadId) throw new Error('publish needs --thread <id> [--as <name>] [--with-recording].');
+  const name = flag(args, 'as') ?? defaultPublishName(threadId);
+  try { process.loadEnvFile?.('.env'); } catch { /* use the process environment */ }
+  const bucket = captureBucketFromEnv();
+  if (!bucket) throw new Error('NEXT_PUBLIC_SUPABASE_URL (the devlens project) and SUPABASE_SECRET_KEY must be set in .env.');
+  const withRecording = args.flags.has('with-recording');
+  const uploaded = await publishCapture({ dir: outDir(args, threadId), name, withRecording, bucket });
+  for (const item of uploaded) console.log(`${item.object}  ${item.bytes} bytes`);
+  console.log(`Published ${threadId} as t3-pub:${name}${withRecording ? ' with its recording' : ' without its recording'}.`);
+}
+
 async function main(argv: readonly string[]): Promise<void> {
   const args = parseArgs(argv);
   if (args.command === 'list') list(args);
@@ -279,6 +295,7 @@ async function main(argv: readonly string[]): Promise<void> {
   else if (args.command === 'verify') await verify(args);
   else if (args.command === 'watch') await watch(args);
   else if (args.command === 'save') save(args);
+  else if (args.command === 'publish') await publish(args);
   else {
     console.log('Usage: tsx packages/t3/src/cli.ts list [--workspace <dir>] | import --thread <id> [--out <dir>] [--recording <meta.json>] [--rerun <rerun.jsonl>] [--no-git] | verify --thread <id> [--dir <checkout>] | watch (--thread <id> | --workspace <dir>) [--interval <ms>]');
     process.exitCode = args.command === 'help' ? 0 : 1;

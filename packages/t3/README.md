@@ -46,6 +46,7 @@ Run from the DevLens repo root. Output goes to `.devlens/t3/<thread>/` (git-igno
 | `npm run t3 -- verify --thread <id>` | Sandbox re-run of the last passing test on a copy of the checkout, then re-import |
 | `npx tsx packages/t3/src/fetch-recording.ts --latest --thread <id>` | Copies the newest uploaded window take and its meta into the capture folder |
 | `npm run t3 -- save --thread <id> --as <name>` | Copies a capture into `examples/t3-captures/<name>/` with home paths as `~`, so it can be committed and shown by a hosted build. Add `--with-recording` only if the video may be public |
+| `npm run t3 -- publish --thread <id> [--as <name>]` | Uploads the capture to the private Supabase bucket `t3-captures/<name>/`, with home paths as `~`. The hosted `/recruiter` lists it as `t3-pub:<name>` without a Git push. Add `--with-recording` to upload the video too. Needs `NEXT_PUBLIC_SUPABASE_URL` and `SUPABASE_SECRET_KEY` in `.env` |
 | `npm run test:t3` | Mapper, diff shapes, test detection, and the read-only store on a temp database |
 
 Flags for `import`: `--recording <meta.json>` attaches media offsets (a `recording-meta.json` in the folder is used automatically), `--rerun <file>`, `--no-git` (skip checkpoint diffs), `--root <dir>` (paths relative to another folder), `--no-checkpoints`, `--db <path>`.
@@ -81,7 +82,8 @@ Every event keeps the T3 thread, run, and turn-item ids, and the provider's own 
 ## Rust (`cargo test`)
 
 - `t3 verify` re-runs a `cargo test` in the sandbox. Run `cargo fetch` in the app first. The re-run works offline and never downloads crates.
-- For a `cargo test` command only, the sandbox may read `~/.rustup`, `~/.cargo/bin`, `~/.cargo/registry/index`, `~/.cargo/registry/cache`, and `~/.cargo/git/db`. It cannot write to them.
+- For a plain `cargo test` command only, the sandbox may read `~/.rustup`, `~/.cargo/bin`, the crates.io folders in `~/.cargo/registry/index` and `~/.cargo/registry/cache`, and `~/.cargo/git/db`. It cannot write to them. A `cd` step must be one plain path, and a single `&` or `|` makes the command ineligible.
+- A `build.rs` or a proc macro runs during `cargo test` and can read the same folders. It has no network and no writes, so anything it prints can leave only through the re-run output. `~/.cargo/git/db` may hold private repositories.
 - It cannot read the rest of `~/.cargo`, such as `credentials.toml` or `config.toml`. Network stays blocked, loopback included.
 - Cargo state and build output stay in the temp folder. The app's `target/` is not copied, so the first re-run compiles from scratch.
 - A cargo re-run times out after 5 minutes. Other re-runs time out after 30 seconds.
@@ -105,3 +107,8 @@ Worktrees: when a thread runs in a T3 worktree, paths are relative to that workt
 - Redaction runs before anything is written, with the same rules as the Claude Code hook. Home paths are removed from free text on display.
 - Text redaction does not remove secrets that appear in video frames.
 - The recording stays in the private `recordings` bucket until you copy it with the service key. The copy stays in the git-ignored `.devlens/` folder.
+- `publish` uploads `events.jsonl`, `edges.jsonl`, `rerun.jsonl`, and `capture.json` to the private `t3-captures` bucket. The bucket has no policies for anon or signed-in users, so only the server key can read it. The publishable key gets "object not found".
+- `publish` uploads `recording.webm` and `recording-meta.json` only with `--with-recording`. Publishing again without the flag removes a published recording.
+- The hosted site reads published captures on the server. A published recording plays through a signed URL that expires after 10 minutes. The bucket is never public.
+- `publish` replaces home paths with `~`, the same as `save`. It does not remove other secrets. Redaction at import is the safeguard, so check the capture before you publish.
+- `--as` defaults to the thread id in lowercase with dashes. Names are 3 to 61 lowercase letters, digits, and dashes.
