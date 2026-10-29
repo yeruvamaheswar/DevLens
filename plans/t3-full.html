@@ -210,7 +210,7 @@ footer{margin-top:3.5rem;padding-top:.8rem;border-top:1px solid var(--rule);font
 }
 </style>
 </head>
-<body data-hash="6934a64f4c52" data-repo="DevLens">
+<body data-hash="d3e418dc5b7c" data-repo="DevLens">
 <script type="text/plain" id="src">---
 kind: plan
 title: T3 Code adapter, from experimental to verified (CR-12)
@@ -328,6 +328,7 @@ Time now: 11:05 CDT · 4 h 25 min to freeze
 - Files: `packages/t3/src/rpc.ts` (new), `packages/t3/src/cli.ts`, `packages/t3/tests/rpc.test.ts`, `packages/t3/README.md`
 - [x] Find T3's RPC transport, auth, and read-only thread subscription in the installed T3 server · Claude (opus/high) · T3 updated itself to 0.1.5 (migration 72). Effect RPC over `ws://127.0.0.1:3773/ws?orchestrationProtocol=2&wsTicket=…`; `t3 pair` → bearer (scope `orchestration:read`, 30 days) → per-connection ticket. Read methods used: `subscribeThread`, `subscribeShell`, `getTurnItem` · none
 - [x] `--via rpc` reader feeding the same mapper · Claude (opus/high) · 135f84c; allowlist refuses other methods before sending; fake-server tests 4 pass; real server answers 401 without a token; checked migration moved to 72 after real imports (271 tool calls, 107 edits, 2 model switches). Review running · revert 135f84c
+- [x] Independent review of slice 4 · Claude (sonnet/medium), separate session · PASS WITH FIXES. NOT-2 allowlist holds (checked in T3's server code). Fixed: tokens refused for any non-loopback origin (test added), token file removed before write, scope-refusal message says to revoke. Documented: `subscribeThread` may hydrate a v1-migrated thread's transcript (T3's own UI does the same; new threads are v2), 256 KB body cap. Open low items: no frame-size cap, no Interrupt on timeout (socket close ends it) · revert the fix commit
 - [ ] Pair once in your terminal: `~/.t3/bin/t3 pair --scope orchestration:read --ttl 5m --label DevLens`, then `T3_PAIRING_TOKEN=<token> npx tsx packages/t3/src/rpc.ts --pair` · user · EVAL-7: `npx tsx packages/t3/src/rpc.ts --thread <id> --compare` exits 0 · revoke the DevLens session in T3
 
 ### Slice 5: Real take (Uma)
@@ -368,7 +369,7 @@ Time now: 11:05 CDT · 4 h 25 min to freeze
     <div><span class="lbl">Status</span><div class="val" id="status"></div></div>
     <div><span class="lbl">Dated</span><div class="val" id="dated"></div></div>
     <div><span class="lbl">Entries done</span><div class="val" id="count"></div></div>
-    <div><span class="lbl">Page</span><div class="val hash">6934a64f4c52</div></div>
+    <div><span class="lbl">Page</span><div class="val hash">d3e418dc5b7c</div></div>
   </header>
   <div class="layout">
     <nav class="contents" aria-label="Contents"><span class="lbl">Contents</span><ol id="toc"></ol></nav>
@@ -376,7 +377,7 @@ Time now: 11:05 CDT · 4 h 25 min to freeze
       <div class="gutter" id="gutter" aria-hidden="true"></div>
       <section id="brief" class="sec" style="margin-top:0" aria-label="Brief"></section>
       <div id="sections"></div>
-      <footer>Generated from plans/t3-full.md in DevLens by md-view.sh · built 2026-10-29 11:50 · page 6934a64f4c52 (source + template). Agents: edit t3-full.md, then rebuild. Never edit this page.</footer>
+      <footer>Generated from plans/t3-full.md in DevLens by md-view.sh · built 2026-10-29 11:51 · page d3e418dc5b7c (source + template). Agents: edit t3-full.md, then rebuild. Never edit this page.</footer>
     </main>
   </div>
 </div>
