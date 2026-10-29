@@ -9,7 +9,7 @@
 // Output (default .devlens/t3/<thread>/, git-ignored): events.jsonl, edges.jsonl, capture.json.
 // A recording-meta.json or rerun.jsonl already in that folder is used again on re-import.
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -202,9 +202,20 @@ export function runImport(options: ImportOptions): ImportResult {
   const plan = planSession([...mapped.map((event, order) => ({ event, order })), ...rerun.map((event, index) => ({ event, order: mapped.length + index }))]);
 
   mkdirSync(out, { recursive: true });
-  writeFileSync(path.join(out, 'events.jsonl'), plan.events.map((event) => JSON.stringify(event)).join('\n') + '\n');
-  writeFileSync(path.join(out, 'edges.jsonl'), plan.edges.map((edge) => JSON.stringify(edge)).join('\n') + (plan.edges.length ? '\n' : ''));
-  writeFileSync(path.join(out, 'capture.json'), JSON.stringify(capture, null, 2) + '\n');
+  // Keep a live watch stamp across re-imports, so the page never sees the capture as not live mid-import.
+  const previous = path.join(out, 'capture.json');
+  if (existsSync(previous)) {
+    try {
+      const stamp = (JSON.parse(readFileSync(previous, 'utf8')) as { watch?: unknown }).watch;
+      if (stamp) (capture as Record<string, unknown>).watch = stamp;
+    } catch {
+      // A broken previous file is replaced below.
+    }
+  }
+  // Each file is written whole, then renamed, so a reader never sees a half-written file (review finding 5).
+  writeAtomic(path.join(out, 'events.jsonl'), plan.events.map((event) => JSON.stringify(event)).join('\n') + '\n');
+  writeAtomic(path.join(out, 'edges.jsonl'), plan.edges.map((edge) => JSON.stringify(edge)).join('\n') + (plan.edges.length ? '\n' : ''));
+  writeAtomic(previous, JSON.stringify(capture, null, 2) + '\n');
   return { events: plan.events, edgeCount: plan.edges.length, rerunCount: rerun.length, capture };
 }
 
@@ -235,23 +246,38 @@ function importThread(args: Args): void {
   for (const line of capture.unknowns) console.log(`unknown: ${line}`);
 }
 
+function writeAtomic(file: string, data: string): void {
+  const temp = `${file}.tmp`;
+  writeFileSync(temp, data);
+  renameSync(temp, file);
+}
+
+// --interval in milliseconds: a number, at least 250 (review finding 6).
+export function parseInterval(raw: string | true | undefined): number {
+  if (raw === undefined) return 2000;
+  const value = Number(raw);
+  if (raw === true || !Number.isFinite(value) || value < 250) throw new Error('--interval must be a number of milliseconds, at least 250.');
+  return value;
+}
+
 // Live capture: poll the read-only database and re-import through runImport when the thread changes.
 async function watch(args: Args): Promise<void> {
   const thread = flag(args, 'thread');
   const workspace = flag(args, 'workspace');
   if (!thread && !workspace) throw new Error('watch needs --thread <id> or --workspace <dir>.');
   const dbPath = flag(args, 'db') ?? DEFAULT_T3_DB;
+  const intervalMs = parseInterval(args.flags.get('interval'));
   const watcher = startWatch({
     db: dbPath,
     thread: thread ?? undefined,
     workspace: workspace ?? undefined,
     outDir: (threadId) => outDir(args, threadId),
-    intervalMs: Number(flag(args, 'interval') ?? 2000),
+    intervalMs,
     importOnce: (threadId) => ({ events: runImport(importOptions(args, threadId)).events.length }),
   });
   process.once('SIGINT', () => void watcher.stop());
   process.once('SIGTERM', () => void watcher.stop());
-  console.error(`Watching ${thread ? `thread ${thread}` : `the newest thread in ${workspace}`} every ${Number(flag(args, 'interval') ?? 2000) / 1000} s. Ctrl+C stops.`);
+  console.error(`Watching ${thread ? `thread ${thread}` : `the newest thread in ${workspace}`} every ${intervalMs / 1000} s. Ctrl+C stops.`);
   await watcher.done;
 }
 

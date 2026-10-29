@@ -132,3 +132,12 @@ describe('t3 watch', () => {
     expect(isLive(undefined, now)).toBe(false);
   });
 });
+
+describe('watch --interval (review finding 6)', async () => {
+  const { parseInterval } = await import('../src/cli');
+  it('defaults to 2 s and rejects a missing, non-numeric, or tiny value', () => {
+    expect(parseInterval(undefined)).toBe(2000);
+    expect(parseInterval('500')).toBe(500);
+    for (const raw of [true, 'abc', '0', '10', '-5'] as const) expect(() => parseInterval(raw), String(raw)).toThrow(/at least 250/);
+  });
+});
