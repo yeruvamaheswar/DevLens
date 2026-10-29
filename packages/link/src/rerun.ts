@@ -124,12 +124,17 @@ async function copyTree(src: string, dest: string, skipCargoTarget = false): Pro
 // whose words hold no quotes, substitutions, or redirects. Only such a command gets the Rust read exception.
 const SAFE_WORD = /^[\w@%+=:,./-]+$/;
 const CARGO_TAIL = /\s*(?:2>&1\s*)?(?:\|\s*(?:tail|head|cat)(?:\s+-?\w+)*\s*)*$/;
+const CD_STEP = /^cd\s+[\w@%+=:,./-]+$/;
 export function isCargoTestCommand(command: string): boolean {
-  if (/[\n\r`$<>()'"\\{}*?[\]!~#]/.test(command.replace(CARGO_TAIL, ''))) return false;
-  const steps = command.split(/&&|;|\|\|/).map((step) => step.trim()).filter(Boolean);
-  const work = steps.filter((step) => !/^cd(?:\s|$)/.test(step));
+  const body = command.replace(CARGO_TAIL, '');
+  if (/[\n\r`$<>()'"\\{}*?[\]!~#]/.test(body)) return false;
+  // Steps join only with `&&` or `;`. A single `&` or `|` anywhere else could start a second command.
+  if (/[&|]/.test(body.replace(/&&/g, ';'))) return false;
+  const steps = body.split(/&&|;/).map((step) => step.trim()).filter(Boolean);
+  if (steps.some((step) => /^cd(?:\s|$)/.test(step) && !CD_STEP.test(step))) return false;
+  const work = steps.filter((step) => !CD_STEP.test(step));
   if (work.length !== 1) return false;
-  const words = work[0].replace(CARGO_TAIL, '').trim().split(/\s+/);
+  const words = work[0].trim().split(/\s+/);
   while (words.length > 0 && /^[A-Z_][A-Z0-9_]*=/.test(words[0])) words.shift();
   return words[0] === 'cargo' && words[1] === 'test' && words.every((word) => SAFE_WORD.test(word));
 }
@@ -164,11 +169,24 @@ async function cargoAccess(root: string): Promise<CargoAccess> {
   if (rustupHome) readOnly.push(rustupHome);
   const bin = cargoReal ? await realOrNull(path.join(cargoReal, 'bin')) : null;
   if (bin) readOnly.push(bin);
-  for (const shared of ['registry/index', 'registry/cache', 'git/db']) {
+  // Registry index and cache: crates.io only, so crates from a private registry stay unreadable (review finding 3).
+  for (const shared of ['registry/index', 'registry/cache']) {
     const real = cargoReal ? await realOrNull(path.join(cargoReal, shared)) : null;
     if (!real) continue;
-    readOnly.push(real);
-    await symlink(real, path.join(cargoHome, shared));
+    await mkdir(path.join(cargoHome, shared), { recursive: true });
+    for (const entry of await readdir(real, { withFileTypes: true })) {
+      if (!entry.isDirectory() || !entry.name.startsWith('index.crates.io-')) continue;
+      const source = await realOrNull(path.join(real, entry.name));
+      if (!source) continue;
+      readOnly.push(source);
+      await symlink(source, path.join(cargoHome, shared, entry.name));
+    }
+  }
+  // Git dependencies: the whole git db is readable (it may hold private repositories; see the README).
+  const gitDb = cargoReal ? await realOrNull(path.join(cargoReal, 'git/db')) : null;
+  if (gitDb) {
+    readOnly.push(gitDb);
+    await symlink(gitDb, path.join(cargoHome, 'git/db'));
   }
   // A read-only path must never cover the home folder, the repo, or the run (for example a symlinked ~/.cargo).
   const guarded = [home, await realOrNull(home), repoRoot, await realOrNull(repoRoot), root].filter((p): p is string => p !== null);

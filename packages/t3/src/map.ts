@@ -132,6 +132,8 @@ const OUTPUT_TAIL = /\s*(?:2>&1\s*)?(?:\|\s*(?:tail|head|cat)\b[^|]*)*$/;
 export function isTestRun(command: string): boolean {
   if (command.includes('\n') || command.includes('<<')) return false;
   const steps = command.split(/&&|;|\|\|/).map((step) => step.trim()).filter(Boolean);
+  // A `cd` step is one plain path. `cd . & x` or `cd x | sh` would hide a second command.
+  if (steps.some((step) => /^cd(?:\s|$)/.test(step) && !/^cd\s+[\w@%+=:,./~-]+$/.test(step))) return false;
   const work = steps.filter((step) => !/^cd(?:\s|$)/.test(step));
   if (work.length !== 1) return false;
   const step = work[0].replace(/^(?:[A-Z_][A-Z0-9_]*=\S*\s+)+/, '').replace(OUTPUT_TAIL, '').trim();

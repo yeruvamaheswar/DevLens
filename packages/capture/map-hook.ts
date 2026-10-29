@@ -103,8 +103,8 @@ function commandOutput(input: HookInput): string {
 
 export function testStatusFromOutput(output: string): 'passed' | 'failed' | 'unknown' {
   // Rust (cargo test). A compile failure prints no `test result:` line; each test binary prints its own line.
-  if (/^error: could not compile /m.test(output) || /^test result: FAILED\b/m.test(output)) return 'failed';
-  if (/^error\[E\d{4}\]/m.test(output) && !/^test result: /m.test(output)) return 'failed';
+  if (/^test result: FAILED\b/m.test(output)) return 'failed';
+  if ((/^error: could not compile /m.test(output) || /^error\[E\d{4}\]/m.test(output)) && !/^test result: /m.test(output)) return 'failed';
   const nodeFails = [...output.matchAll(/ℹ fail (\d+)/g)].map((match) => Number(match[1]));
   const nodePasses = [...output.matchAll(/ℹ pass (\d+)/g)].map((match) => Number(match[1]));
   if (nodeFails.length > 0 || nodePasses.length > 0) {

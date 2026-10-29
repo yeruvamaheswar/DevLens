@@ -311,6 +311,8 @@ describe('hook mapping', () => {
     expect(testStatusFromOutput('error[E0425]: cannot find value `x` in this scope\n --> src/lib.rs:2:5\n')).toBe('failed');
     // A passing trybuild-style test may print an expected compiler error. The summary line decides.
     expect(testStatusFromOutput(`error[E0308]: expected mismatch (from a ui test)\n${lib}`)).toBe('passed');
+    // Review finding 7: a passing run that prints the compile-failure line (a ui test) is still decided by its summary.
+    expect(testStatusFromOutput(`error: could not compile \`ui_case\` (expected)\n${lib}`)).toBe('passed');
     expect(testStatusFromOutput('ℹ tests 2\nℹ pass 2\nℹ fail 0')).toBe('passed');
     expect(testStatusFromOutput('ℹ pass 1\nℹ fail 1')).toBe('failed');
     expect(testStatusFromOutput(' Tests  1 failed | 2 passed (3)')).toBe('failed');

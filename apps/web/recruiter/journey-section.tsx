@@ -49,10 +49,12 @@ export function JourneySection() {
     return () => controller.abort();
   }, [key]);
 
-  // While the capture is live (`t3 watch` stamped it in the last 15 s), refetch every 5 s. Keep the data and the chosen station on a failed or stale poll.
+  // A local T3 capture (`t3:`) is refetched every 5 s, live or not: `t3 watch` may start after the page opens, and one
+  // stale "not live" answer must not stop the updates (review finding 1). Keep the data and the chosen station on a failed poll.
   const live = data?.journey.source.live === true;
+  const local = key.startsWith('t3:');
   useEffect(() => {
-    if (!live) return;
+    if (!local) return;
     const controller = new AbortController();
     const timer = setInterval(() => {
       fetch(`/api/journey?source=${encodeURIComponent(key)}`, { cache: 'no-store', signal: controller.signal })
@@ -70,7 +72,7 @@ export function JourneySection() {
       clearInterval(timer);
       controller.abort();
     };
-  }, [live, key]);
+  }, [local, key]);
 
   const layout = useMemo(() => {
     if (!data) return null;

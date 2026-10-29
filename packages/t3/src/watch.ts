@@ -21,14 +21,17 @@ export type Watcher = { stop: () => Promise<void>; done: Promise<void> };
 
 type Row = Record<string, number | string | null>;
 
-// A cheap change marker for one thread: counts and newest timestamps of its projections.
+// A cheap change marker for one thread: counts, statuses, and newest timestamps of its projections, plus its event stream's last sequence.
 export function fingerprint(db: DatabaseSync, threadId: string): string {
   const one = (sql: string) => JSON.stringify(db.prepare(sql).get(threadId) as Row | undefined);
   return [
     one('SELECT updated_at FROM orchestration_v2_projection_threads WHERE thread_id = ?'),
     one("SELECT count(*) AS n, max(updated_at) AS at, sum(status = 'completed') AS done FROM orchestration_v2_projection_turn_items WHERE thread_id = ?"),
     one("SELECT count(*) AS n, max(coalesce(completed_at, requested_at)) AS at, sum(status = 'completed') AS done FROM orchestration_v2_projection_runs WHERE thread_id = ?"),
-    one('SELECT count(*) AS n, max(captured_at) AS at FROM orchestration_v2_projection_checkpoints WHERE thread_id = ?'),
+    one("SELECT count(*) AS n, max(captured_at) AS at, group_concat(status) AS statuses FROM orchestration_v2_projection_checkpoints WHERE thread_id = ?"),
+    one('SELECT group_concat(status) AS statuses FROM orchestration_v2_projection_runs WHERE thread_id = ?'),
+    // Every event on the thread's stream (model switches, renames) moves this, even when no projection row changes.
+    one('SELECT max(sequence) AS seq FROM orchestration_events WHERE stream_id = ?'),
   ].join('|');
 }
 

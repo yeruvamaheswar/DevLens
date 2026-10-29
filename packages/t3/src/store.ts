@@ -60,7 +60,7 @@ const REQUIRED: Record<string, string[]> = {
   orchestration_v2_projection_runs: ['run_id', 'thread_id', 'ordinal', 'provider', 'provider_thread_id', 'status', 'requested_at', 'completed_at', 'payload_json'],
   orchestration_v2_projection_turn_items: ['turn_item_id', 'thread_id', 'run_id', 'ordinal', 'type', 'status', 'updated_at', 'payload_json'],
   orchestration_v2_projection_checkpoints: ['checkpoint_id', 'thread_id', 'run_id', 'status', 'captured_at', 'payload_json'],
-  orchestration_events: ['sequence', 'event_id', 'event_type', 'occurred_at', 'payload_json'],
+  orchestration_events: ['sequence', 'event_id', 'stream_id', 'event_type', 'occurred_at', 'payload_json'],
 };
 
 export class T3SchemaError extends Error {}
