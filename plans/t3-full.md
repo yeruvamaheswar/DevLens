@@ -1,10 +1,11 @@
 ---
 kind: plan
 title: T3 Code adapter, from experimental to verified (CR-12)
-status: active
+status: merged as experimental
 updated: 2026-10-29
 ---
 Summary: Make the T3 Code adapter full-featured and verified, proven on a new Rust + Supabase app that Uma builds in T3.
+Outcome: 2026-10-29 2:50 PM. Slices 1-4 and the question bridge built, reviewed by separate sessions, fixed, and merged to main. T3 stays experimental (DEC-6): no real take by Uma was recorded before the 3:30 PM freeze, so EVAL-8 to EVAL-11 did not run.
 Goal: T3 is a second verified capture adapter by 3:30 PM CDT, or it stays experimental with the gap written down.
 Intent: "We need to make T3 out of experimental and full feature. Build the full stack app and test the Devlens."
 Not wanted: a score, rank, or verdict · staged failures · a looser sandbox than the Rust exception · secrets in captures, Git, or chat
@@ -57,7 +58,7 @@ Time now: 11:05 CDT · 4 h 25 min to freeze
 | EVAL-9 | REQ-2, REQ-3 | `t3 verify` on the take: sandbox re-run of the last passing `cargo test` passes | integration | not run |
 | EVAL-10 | REQ-2 | Clicking the first failing-test station seeks the window recording to within 2 s of that event | browser | not run |
 | EVAL-11 | REQ-6 | A different session reviews the slice diffs and the take: PASS or PASS WITH FIXES, all fixed | human (review) | not run |
-| EVAL-12 | all | `npm run check`, all test suites, `fixture:verify`, `build`, `check:bundle` still pass; golden replay unchanged | integration | not run |
+| EVAL-12 | all | `npm run check`, all test suites, `fixture:verify`, `build`, `check:bundle` still pass; golden replay unchanged | integration | pass 2026-10-29 14:50: check clean; t3 39, journey 14, capture 37, rerun 19, link 13, replay 21, record 61, sync 8, recruiter 37, agent 60, widget 14, questions 91; fixture PASS; build and check:bundle PASS |
 
 ## Infrastructure
 | Resource | Defined in | Applied by | Secrets |
@@ -147,3 +148,5 @@ Time now: 11:05 CDT · 4 h 25 min to freeze
 |---|---|---|---|---|
 | CR-12 | 2026-10-29 | T3 adapter: live capture, Rust test support with a read-only toolchain sandbox exception, hosted imports via private Supabase storage, RPC reader; promote to verified only if EVAL-1 to EVAL-12 pass. Freeze moves to 3:30 PM | contract DEC-7, EVAL-14, CR-11, NOT-3 | user, 11:12 |
 | CR-13 | 2026-10-29 | NOT-2 allows one user-started, revocable, read-only T3 pairing session (scope `orchestration:read`) for the RPC reader. DevLens still sends only allowlisted read methods | NOT-2, REQ-5 | user, 11:58 |
+| CR-14 | 2026-10-29 | T3 sessions get DevLens questions: `t3 watch` starts the same question agent when a T3 run completes (Claude Code uses its Stop hook). Same opt-in file. Reviewed (PASS WITH FIXES, fixed in 2b01d6e) | REQ-2, CR-7 | user, 1:15 PM |
+| CR-15 | 2026-10-29 | Merge CR-12 to main with T3 labelled experimental. Verified label waits for a real take | REQ-6, DEC-6 | user, 2:48 PM |
