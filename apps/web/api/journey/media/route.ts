@@ -1,12 +1,12 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { t3Dir } from '../../../journey/sources';
+import { captureDir } from '../../../journey/sources';
 
 export const runtime = 'nodejs';
 
-// Serves a local T3 take copied into .devlens/t3/<thread>/recording.webm. Never a path from the request.
+// Serves the take of one T3 capture (recording.webm in its folder). Never a path from the request.
 export async function GET(request: Request) {
-  const dir = t3Dir(new URL(request.url).searchParams.get('thread') ?? '');
+  const dir = captureDir(new URL(request.url).searchParams.get('source') ?? '');
   if (!dir) return new Response('Recording unavailable.', { status: 404 });
   let file: Buffer;
   try {

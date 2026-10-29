@@ -44,7 +44,8 @@ Run from the DevLens repo root. Output goes to `.devlens/t3/<thread>/` (git-igno
 | `npm run t3 -- import --thread <id>` | Maps the thread to `events.jsonl`, `edges.jsonl`, `capture.json` |
 | `npm run t3 -- verify --thread <id>` | Sandbox re-run of the last passing test on a copy of the checkout, then re-import |
 | `npx tsx packages/t3/src/fetch-recording.ts --latest --thread <id>` | Copies the newest uploaded window take and its meta into the capture folder |
-| `npm run test:t3` | Mapper, diff shapes, and the read-only store on a temp database |
+| `npm run t3 -- save --thread <id> --as <name>` | Copies a capture into `examples/t3-captures/<name>/` with home paths as `~`, so it can be committed and shown by a hosted build. Add `--with-recording` only if the video may be public |
+| `npm run test:t3` | Mapper, diff shapes, test detection, and the read-only store on a temp database |
 
 Flags for `import`: `--recording <meta.json>` attaches media offsets (a `recording-meta.json` in the folder is used automatically), `--rerun <file>`, `--no-git` (skip checkpoint diffs), `--root <dir>` (paths relative to another folder), `--no-checkpoints`, `--db <path>`.
 
@@ -54,7 +55,7 @@ Flags for `import`: `--recording <meta.json>` attaches media offsets (a `recordi
 |---|---|---|---|
 | `user_message`, `createdBy=user` | `prompt` | developer | Text kept word for word, then redacted |
 | `user_message`, `createdBy=agent` | `prompt` | agent | `attribution: agent_authored`. Never shown as the developer's words |
-| `command_execution` matching `npm test`, `vitest`, `pytest` | `test` | tool | Status from the output; the provider failure flag only when the output is unclear (`signal: provider_status`) |
+| `command_execution` that is one test runner call (`npm test`, `npm run test:*`, `vitest`, `pytest`, `node --test`), after `cd` steps and an output tail | `test` | tool | Status from the output. If the output is unclear and the provider flags a failure: `failed`. If the output reads as a pass but the provider flags a failure: `unknown`. Both use `signal: provider_status` |
 | other `command_execution` | `tool_call` | agent | Command and the first 1500 characters of output |
 | `file_change`, completed | `file_edit` | agent | Diff in the provider's shape: `old_new`, `written_content`, `unified`, or `not_exposed` |
 | `file_change`, failed | `tool_call` | agent | `applied: false`. Not counted as an edit |

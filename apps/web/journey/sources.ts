@@ -21,11 +21,23 @@ export function t3Root(): string {
   return path.join(repoRoot(), '.devlens', 't3');
 }
 
-// A thread id names one folder under .devlens/t3. Anything else is refused.
-export function t3Dir(threadId: string): string | null {
+// Captures saved with `npm run t3 -- save` are committed, so a hosted build can show them.
+export function savedRoot(): string {
+  return path.join(repoRoot(), 'examples', 't3-captures');
+}
+
+// A thread id names one folder under .devlens/t3 (or, when saved, under examples/t3-captures). Anything else is refused.
+export function t3Dir(threadId: string, root: string = t3Root()): string | null {
   if (!THREAD_ID.test(threadId) || threadId.includes('..')) return null;
-  const dir = path.join(t3Root(), threadId);
-  return path.dirname(dir) === t3Root() && existsSync(path.join(dir, 'capture.json')) ? dir : null;
+  const dir = path.join(root, threadId);
+  return path.dirname(dir) === root && existsSync(path.join(dir, 'capture.json')) ? dir : null;
+}
+
+// `t3:<thread>` is a local import; `t3-saved:<name>` is a committed capture.
+export function captureDir(key: string): string | null {
+  if (key.startsWith('t3:')) return t3Dir(key.slice(3));
+  if (key.startsWith('t3-saved:')) return t3Dir(key.slice(9), savedRoot());
+  return null;
 }
 
 function readJsonl<T>(file: string): T[] {
@@ -48,21 +60,24 @@ function strip(event: Event): Event {
   return { ...event, payload: redactDeep(payload) as Record<string, unknown> };
 }
 
-export function listSources(): JourneySourceRow[] {
-  const rows: JourneySourceRow[] = [{ key: 'golden', label: `Claude Code: ${goldenLabel}`, status: 'verified', adapter: 'claude_code_hook' }];
-  if (!existsSync(t3Root())) return rows;
-  const captures = readdirSync(t3Root(), { withFileTypes: true })
-    .filter((entry) => entry.isDirectory() && t3Dir(entry.name))
+function capturesIn(root: string, prefix: string, suffix: string) {
+  if (!existsSync(root)) return [];
+  return readdirSync(root, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && t3Dir(entry.name, root))
     .flatMap((entry) => {
       // One unreadable capture must not hide the others or the golden take.
       try {
-        const capture = JSON.parse(readFileSync(path.join(t3Root(), entry.name, 'capture.json'), 'utf8')) as { label: string; imported_at: string };
-        return [{ key: `t3:${entry.name}`, label: String(capture.label), status: 'experimental' as const, adapter: 't3_code' as const, at: String(capture.imported_at) }];
+        const capture = JSON.parse(readFileSync(path.join(root, entry.name, 'capture.json'), 'utf8')) as { label: string; imported_at: string };
+        return [{ key: `${prefix}${entry.name}`, label: `${String(capture.label)}${suffix}`, status: 'experimental' as const, adapter: 't3_code' as const, at: String(capture.imported_at) }];
       } catch {
         return [];
       }
-    })
-    .sort((a, b) => b.at.localeCompare(a.at));
+    });
+}
+
+export function listSources(): JourneySourceRow[] {
+  const rows: JourneySourceRow[] = [{ key: 'golden', label: `Claude Code: ${goldenLabel}`, status: 'verified', adapter: 'claude_code_hook' }];
+  const captures = [...capturesIn(t3Root(), 't3:', ''), ...capturesIn(savedRoot(), 't3-saved:', ' (saved)')].sort((a, b) => b.at.localeCompare(a.at));
   return [...rows, ...captures.map(({ at: _at, ...row }) => row)];
 }
 
@@ -83,28 +98,28 @@ async function golden(): Promise<JourneyResponse> {
   return { journey: buildJourney({ events: replay.events, edges: replay.edges, source, questions }), events: replay.events.map(strip), edges: replay.edges };
 }
 
-function t3(threadId: string): JourneyResponse | null {
-  const dir = t3Dir(threadId);
+function t3(key: string): JourneyResponse | null {
+  const dir = captureDir(key);
   if (!dir) return null;
   const capture = JSON.parse(readFileSync(path.join(dir, 'capture.json'), 'utf8')) as { label: string; unknowns: string[]; not_captured: string[]; t3: { title: string; workspace: string | null } };
   const events = readJsonl<Event>(path.join(dir, 'events.jsonl'));
   const edges = readJsonl<Edge>(path.join(dir, 'edges.jsonl'));
   const hasVideo = existsSync(path.join(dir, 'recording.webm'));
   const source: JourneySourceMeta = {
-    key: `t3:${threadId}`,
+    key,
     label: capture.label,
     adapter: 't3_code',
     status: 'experimental',
     provenance_note: 'Read from the T3 Code server’s local store by the DevLens T3 adapter (experimental, read-only). T3 records what each provider reported; DevLens did not hook the provider.',
     unknowns: capture.unknowns,
     not_captured: capture.not_captured,
-    media: hasVideo ? { url: `/api/journey/media?thread=${encodeURIComponent(threadId)}`, label: 'Window recording of the T3 Code app. Audio and camera off.' } : null,
+    media: hasVideo ? { url: `/api/journey/media?source=${encodeURIComponent(key)}`, label: 'Window recording of the T3 Code app. Audio and camera off.' } : null,
   };
   return { journey: buildJourney({ events, edges, source }), events: events.map(strip), edges };
 }
 
 export async function loadJourney(key: string): Promise<JourneyResponse | null> {
   if (key === 'golden') return golden();
-  if (key.startsWith('t3:')) return t3(key.slice(3));
+  if (key.startsWith('t3:') || key.startsWith('t3-saved:')) return t3(key);
   return null;
 }

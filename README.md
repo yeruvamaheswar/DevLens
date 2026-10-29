@@ -98,7 +98,7 @@ What leaves the machine: one request per Stop to the engine you chose. It holds 
 
 Below the line, seven steps show the failure-to-fix chain: original failure, first fix, still failing, developer response, revised code, passing test, independent verification. A missing step is said in words, never filled in. Three questions come from fixed rules and cite event ids. The page shows unknowns and what was not captured.
 
-Sources: the golden Claude Code take (verified) and any imported T3 Code thread (experimental). Open a source directly with `/recruiter?source=golden` or `/recruiter?source=t3:<thread id>`. The live updates feed from CR-9 is below the journey.
+Sources: the golden Claude Code take (verified), any imported T3 Code thread (experimental, local), and saved T3 captures in `examples/t3-captures/` (experimental, committed, so a hosted build shows them). Open a source directly with `/recruiter?source=golden`, `/recruiter?source=t3:<thread id>`, or `/recruiter?source=t3-saved:sprintboard-rehearsal`. The saved rehearsal is a real T3 session on SprintBoard whose prompts were written by an agent, and the page says so. The live updates feed from CR-9 is below the journey.
 
 ## T3 Code adapter (experimental)
 

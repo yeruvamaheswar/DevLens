@@ -3,10 +3,12 @@
 //   npx tsx packages/t3/src/cli.ts import --thread <id> [--out <dir>] [--recording <meta.json>] [--rerun <rerun.jsonl>] [--no-git] [--db <path>]
 //   npx tsx packages/t3/src/cli.ts verify --thread <id>   (sandbox re-run of the last passing test, then re-import)
 //   --root <dir>: paths relative to <dir> instead of the thread's checkout. --no-checkpoints: leave T3 git checkpoints out.
+//   npx tsx packages/t3/src/cli.ts save --thread <id> --as <name> [--with-recording]   (copy into examples/t3-captures/<name>, home paths as ~)
 // Output (default .devlens/t3/<thread>/, git-ignored): events.jsonl, edges.jsonl, capture.json.
 // A recording-meta.json or rerun.jsonl already in that folder is used again on re-import.
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import path from 'node:path';
 import type { Event, RecordingMeta } from '../../core/event';
 import { attachMedia } from '../../core/src/sync';
@@ -195,11 +197,31 @@ function importThread(args: Args): void {
   for (const line of capture.unknowns) console.log(`unknown: ${line}`);
 }
 
+// A saved capture is committed with the repo, so the hosted journey can show it. Home paths become ~.
+function save(args: Args): void {
+  const threadId = flag(args, 'thread');
+  const name = flag(args, 'as');
+  if (!threadId || !name || !/^[a-z0-9][a-z0-9-]{2,60}$/.test(name)) throw new Error('save needs --thread <id> and --as <name> (lowercase letters, digits, dashes).');
+  const from = outDir(args, threadId);
+  if (!existsSync(path.join(from, 'capture.json'))) throw new Error(`Import the thread first: no ${from}/capture.json.`);
+  const to = path.join(process.cwd(), 'examples', 't3-captures', name);
+  mkdirSync(to, { recursive: true });
+  const home = homedir();
+  const scrub = (text: string) => text.split(home).join('~');
+  for (const file of ['events.jsonl', 'edges.jsonl', 'capture.json', 'rerun.jsonl', 'recording-meta.json']) {
+    const source = path.join(from, file);
+    if (existsSync(source)) writeFileSync(path.join(to, file), scrub(readFileSync(source, 'utf8')));
+  }
+  if (args.flags.has('with-recording') && existsSync(path.join(from, 'recording.webm'))) copyFileSync(path.join(from, 'recording.webm'), path.join(to, 'recording.webm'));
+  console.log(`Saved ${threadId} as examples/t3-captures/${name}${args.flags.has('with-recording') ? ' with its recording' : ' without its recording'}. Review it before you commit: it will be public if the repo is.`);
+}
+
 async function main(argv: readonly string[]): Promise<void> {
   const args = parseArgs(argv);
   if (args.command === 'list') list(args);
   else if (args.command === 'import') importThread(args);
   else if (args.command === 'verify') await verify(args);
+  else if (args.command === 'save') save(args);
   else {
     console.log('Usage: tsx packages/t3/src/cli.ts list [--workspace <dir>] | import --thread <id> [--out <dir>] [--recording <meta.json>] [--rerun <rerun.jsonl>] [--no-git] | verify --thread <id> [--dir <checkout>]');
     process.exitCode = args.command === 'help' ? 0 : 1;

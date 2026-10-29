@@ -1,0 +1,60 @@
+{
+  "adapter": "t3_code",
+  "adapter_version": 1,
+  "imported_at": "2026-10-29T15:07:33.708Z",
+  "label": "T3 Code thread, Rehearsal 2: SprintBoard fix in T3",
+  "t3": {
+    "thread_id": "thread:delegated-task:command%3Amcp%3Af42eb73e-1acb-4504-8217-f136ccd92d26%3Adelegate-task%3Adb072871-7a0c-443f-97a1-0edcc60bf888",
+    "title": "Rehearsal 2: SprintBoard fix in T3",
+    "project_id": "0629c812-1d81-4fdb-b9df-ffdba88d55ad",
+    "project_title": "DevLens",
+    "workspace": "sprintboard-demo",
+    "branch": "main",
+    "worktree": false,
+    "migration": 69,
+    "checked_migration": 69
+  },
+  "runs": [
+    {
+      "provider": "claudeAgent",
+      "model": "claude-haiku-5-5",
+      "options": {
+        "effort": "low"
+      },
+      "run_id": "run:thread:thread%3Adelegated-task%3Acommand%253Amcp%253Af42eb73e-1acb-4504-8217-f136ccd92d26%253Adelegate-task%253Adb072871-7a0c-443f-97a1-0edcc60bf888:ordinal:1",
+      "run_ordinal": 1,
+      "run_status": "completed",
+      "provider_thread_id": "provider-thread:provider:claudeAgent:native-thread:pending%3Arun%3Athread%3Athread%253Adelegated-task%253Acommand%25253Amcp%25253Af42eb73e-1acb-4504-8217-f136ccd92d26%25253Adelegate-task%25253Adb072871-7a0c-443f-97a1-0edcc60bf888%3Aordinal%3A1",
+      "basis": "model selection T3 recorded for this run",
+      "requested_at": "2026-10-29T15:01:42.919Z",
+      "completed_at": "2026-10-29T15:02:11.891Z",
+      "prompt_by": "agent"
+    }
+  ],
+  "model_switches": [],
+  "unknowns": [
+    "Some prompts in this thread were written by an agent (T3 records createdBy=agent), not by the developer.",
+    "Paths are relative to sprintboard-demo, a folder named at import. It is not the T3 thread's own checkout.",
+    "T3 git checkpoints were left out at import, because they belong to a different checkout. Unattributed changes cannot be detected.",
+    "The model shown is the selection T3 recorded for each run. DevLens does not see which model the provider actually served.",
+    "Test status comes from the command output (or the provider failure flag when the output is unclear). It is not a re-run."
+  ],
+  "not_captured": [
+    "agent reasoning and replies (T3 stores them; DevLens does not import them)",
+    "editor activity outside the agent",
+    "terminals outside T3",
+    "token usage and cost",
+    "camera",
+    "microphone"
+  ],
+  "skipped": {
+    "running": 0,
+    "internal": 1,
+    "ignored": {
+      "reasoning": 5,
+      "assistant_message": 1
+    }
+  },
+  "recording": null,
+  "rerun": true
+}

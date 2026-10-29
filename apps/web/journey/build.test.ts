@@ -149,3 +149,13 @@ describe('chain order and attribution (review findings 2, 3, 4)', () => {
     expect(at('response', journey).station).toBeNull();
   });
 });
+
+describe('capture keys cannot name a path', async () => {
+  const { captureDir } = await import('./sources');
+  it('refuses traversal, separators, and unknown prefixes', () => {
+    for (const key of ['t3:..', 't3:../../etc', 't3-saved:../golden', 't3-saved:a/b', 't3:', 'x:sprintboard-rehearsal', 't3-saved:does-not-exist']) {
+      expect(captureDir(key), key).toBeNull();
+    }
+    expect(captureDir('t3-saved:sprintboard-rehearsal')).toMatch(/examples\/t3-captures\/sprintboard-rehearsal$/);
+  });
+});

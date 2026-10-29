@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
 const golden = ['../../examples/broken-api/fixtures/golden/**/*'];
+const saved = ['../../examples/t3-captures/**/*'];
 
 /** @type {import('next').NextConfig} */
 const config = {
@@ -11,7 +12,8 @@ const config = {
   outputFileTracingIncludes: {
     '/api/replay': golden,
     '/api/replay/media': golden,
-    '/api/journey': golden,
+    '/api/journey': [...golden, ...saved],
+    '/api/journey/media': saved,
   },
 };
 
