@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Event } from '../core/event';
+import { maybeSendUpdate } from '../recruiter/src/store';
 import { handleHook, projectDirFrom } from './handle';
 
 export type AgentSpawner = (command: string, args: string[], options: { detached: true; stdio: 'ignore' }) => { unref(): void };
@@ -33,26 +34,35 @@ const defaultSpawner: AgentSpawner = (command, args, options) => {
   return child;
 };
 
-// Append the event first, then (Stop only, opt-in on) start the agent in the background.
+// Append the event first. At a Stop: send a recruiter update (sharing on, synchronous, rule-based),
+// then (agent opt-in on) start the agent in the background.
 export function processHook(
   input: unknown,
   options: { env?: Record<string, string | undefined>; eventsPath?: string; now?: Date; spawner?: AgentSpawner; warn?: (line: string) => void } = {},
-): { event: Event | null; spawned: boolean } {
+): { event: Event | null; spawned: boolean; updated: boolean } {
   const env = options.env ?? process.env;
+  const warn = options.warn ?? ((line: string) => process.stderr.write(`${line}\n`));
   const event = handleHook(input, { env, eventsPath: options.eventsPath, now: options.now });
   const record = input as Record<string, unknown>;
   if (!event || event.payload.hook_event_name !== 'Stop' || record.hook_event_name !== 'Stop' || record.stop_hook_active === true) {
-    return { event, spawned: false };
+    return { event, spawned: false, updated: false };
+  }
+  // A recruiter failure never stops the hook or the agent.
+  let updated = false;
+  try {
+    updated = maybeSendUpdate(projectDirFrom(record, env), event.session_id, { env, now: options.now }).sent !== null;
+  } catch (error) {
+    warn(`devlens hook: recruiter update not sent: ${error instanceof Error ? error.message : 'update failed'}`);
   }
   try {
     const projectDir = projectDirFrom(record, env);
-    if (!agentOptedIn(projectDir)) return { event, spawned: false };
+    if (!agentOptedIn(projectDir)) return { event, spawned: false, updated };
     const child = (options.spawner ?? defaultSpawner)(process.execPath, [TSX_CLI, AGENT_CLI, projectDir, event.session_id, event.id], { detached: true, stdio: 'ignore' });
     child.unref();
-    return { event, spawned: true };
+    return { event, spawned: true, updated };
   } catch (error) {
-    (options.warn ?? ((line) => process.stderr.write(`${line}\n`)))(`devlens hook: agent not started: ${error instanceof Error ? error.message : 'spawn failed'}`);
-    return { event, spawned: false };
+    warn(`devlens hook: agent not started: ${error instanceof Error ? error.message : 'spawn failed'}`);
+    return { event, spawned: false, updated };
   }
 }
 

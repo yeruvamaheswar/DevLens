@@ -1,0 +1,130 @@
+/* Recruiter view. Transit Line: flat, square, ruled. Tokens come from app/globals.css. */
+
+.head {
+  display: grid;
+  gap: var(--s2);
+  border-bottom: 2px solid var(--rule-strong);
+}
+
+.title {
+  font-size: var(--t-xl);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.project {
+  font-family: var(--font-mono);
+  font-size: var(--t-sm);
+  color: var(--muted);
+}
+
+.statement {
+  max-width: 72ch;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s3);
+  margin-top: var(--s2);
+}
+
+.notice {
+  font-size: var(--t-sm);
+  font-weight: 600;
+  min-height: 1.45em;
+}
+
+.feed {
+  padding-top: var(--s5);
+}
+
+.state {
+  color: var(--muted);
+  max-width: 72ch;
+  padding: var(--s4) 0;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+}
+
+.entry {
+  padding: var(--s4) 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.entryHead {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3);
+  margin-bottom: var(--s2);
+}
+
+.kind {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: var(--t-cap);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.mark {
+  flex: none;
+}
+
+.markFilled {
+  fill: var(--ink);
+}
+
+.markOpen {
+  fill: var(--station-fill);
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+
+.time {
+  font-size: var(--t-sm);
+  color: var(--muted);
+}
+
+.lines {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: var(--s2);
+}
+
+.line {
+  display: grid;
+  gap: 2px;
+  padding-left: var(--s3);
+  border-left: 2px solid var(--rule);
+}
+
+.text {
+  font-size: var(--t-md);
+  overflow-wrap: anywhere;
+}
+
+.cites {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px var(--s2);
+}
+
+.cite,
+.more {
+  font-family: var(--font-mono);
+  font-size: var(--t-cap);
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.none {
+  color: var(--muted);
+}

@@ -20,6 +20,15 @@ export function hasBadControl(text: string): boolean {
   return BAD_CONTROL.test(text);
 }
 
+// The same score, rank, hire, and fix filter, for other text built from the session (recruiter updates).
+// Returns `banned_<name>` for the first match, or null. Normalizes first, so look-alike forms cannot hide a word.
+// `allow` skips named rules: a quoted developer prompt may say "fix", since those are the developer's words, not advice.
+export function bannedReason(text: string, allow: readonly string[] = []): string | null {
+  const cleaned = normalize(text);
+  for (const { name, pattern } of BANNED) if (!allow.includes(name) && pattern.test(cleaned)) return `banned_${name}`;
+  return null;
+}
+
 export type Verdict = { ok: true; text: string; cites: string[]; reason: string } | { ok: false; reason: string; empty?: boolean };
 
 // `clean` runs first (normalize, then redact). The banned-word check and the kept text both use its output,
