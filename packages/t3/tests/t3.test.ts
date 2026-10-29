@@ -47,7 +47,7 @@ const PASS_OUT = 'ℹ tests 10\nℹ pass 10\nℹ fail 0';
 function snapshot(): T3ThreadSnapshot {
   n = 0;
   return {
-    migration: 69,
+    migration: 72,
     thread: { thread_id: T, project_id: 'p1', title: 'Fix status filter', created_at: '2026-10-29T15:00:00.000Z', updated_at: '2026-10-29T15:09:00.000Z', payload: { branch: 'main', worktreePath: null } },
     project: { project_id: 'p1', title: 'sprintboard-demo', workspace_root: ROOT },
     runs: [run(1, 'claude-sonnet-5-5'), run(2, 'claude-sonnet-5-5'), run(3, 'gpt-6.1-sol', 'codex')],
@@ -166,7 +166,7 @@ describe('T3 store (temporary database)', () => {
       CREATE TABLE orchestration_v2_projection_turn_items (turn_item_id TEXT PRIMARY KEY, thread_id TEXT, run_id TEXT, ordinal INTEGER, type TEXT, status TEXT, updated_at TEXT, payload_json TEXT);
       CREATE TABLE orchestration_v2_projection_checkpoints (checkpoint_id TEXT PRIMARY KEY, thread_id TEXT, run_id TEXT, status TEXT, captured_at TEXT, payload_json TEXT);
       CREATE TABLE orchestration_events (sequence INTEGER PRIMARY KEY AUTOINCREMENT, event_id TEXT, stream_id TEXT, event_type TEXT, occurred_at TEXT, payload_json TEXT);
-      INSERT INTO effect_sql_migrations VALUES (69, 'x');
+      INSERT INTO effect_sql_migrations VALUES (72, 'x');
     `);
     return db;
   }
@@ -182,7 +182,7 @@ describe('T3 store (temporary database)', () => {
     checkSchema(ro);
     const snap = readThread(ro, T);
     ro.close();
-    expect(snap.migration).toBe(69);
+    expect(snap.migration).toBe(72);
     expect(snap.project?.workspace_root).toBe(ROOT);
     expect(snap.runs[0].payload).toEqual({ modelSelection: { model: 'm' } });
     expect(snap.items.map((row) => row.type)).toEqual(['user_message']);

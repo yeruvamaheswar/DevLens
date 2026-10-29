@@ -1,12 +1,12 @@
 # T3 Code adapter (experimental)
 
-Reads one T3 Code thread, read-only, and writes DevLens events in the same contract as the Claude Code hooks. The recruiter journey on `/recruiter` reads the result. Checked against T3 Code 0.1.3 (database migration 69) on 2026-10-29.
+Reads one T3 Code thread, read-only, and writes DevLens events in the same contract as the Claude Code hooks. The recruiter journey on `/recruiter` reads the result. Checked against T3 Code 0.1.3 (database migration 69) and 0.1.5 (migration 72) on 2026-10-29.
 
 ## Why this boundary
 
 | Option | Verdict |
 |---|---|
-| T3 RPC subscriptions (`packages/contracts/src/rpc.ts` in T3) | Supported, but needs a paired, authenticated socket. Not built for the demo. The best long-term route. |
+| T3 RPC subscriptions (`packages/contracts/src/rpc.ts` in T3) | Supported. Built, read-only, needs one pairing (`import --via rpc`). The best long-term route. |
 | Read the T3 server's local store, read-only | **Chosen.** No change to T3, no auth tokens, works for every provider T3 runs. The schema is internal to T3, so the reader checks it and fails closed. |
 | Fork or patch T3 | Not needed. |
 | Screen scraping | Rejected. A screen shows what happened, not who did it. |
@@ -78,6 +78,15 @@ Run `watch` in a second terminal while a T3 session runs. Open `/recruiter` and 
 | items with no native id (T3 bookkeeping) | not imported | | Counted as `internal` |
 
 Every event keeps the T3 thread, run, and turn-item ids, and the provider's own tool id (`tool_use_id`). The event id is `t3:<thread>:<turn item id>`, so a re-import replaces events instead of adding copies. Each event carries `payload.agent`: the provider instance, the model, and the options T3 recorded for that run.
+
+## Supported RPC reader
+
+- `packages/t3/src/rpc.ts` reads a thread from the running T3 server through its authenticated WebSocket RPC instead of the database. Use it with `npm run t3 -- import --thread <id> --via rpc`.
+- Pair once: run `~/.t3/bin/t3 pair --scope orchestration:read --ttl 5m --label DevLens`, then `T3_PAIRING_TOKEN=<token> npx tsx packages/t3/src/rpc.ts --pair` within 5 minutes. This saves `~/.devlens/t3-rpc-token` (mode 600). Revoke it in T3's connections list.
+- Pairing creates one client session in T3's auth store. DevLens changes nothing else in T3.
+- DevLens sends only `orchestration.subscribeThread`, `orchestration.subscribeShell`, and `orchestration.getTurnItem`. Any other method is refused before it is sent. The `orchestration:read` scope alone would allow a few calls that are not pure reads, so this allowlist is the guard.
+- Compare with the database reader: `npx tsx packages/t3/src/rpc.ts --thread <id> --compare` (exit code 2 on any difference).
+- Checked against T3 server 0.1.5 (protocol 2, migration 72). The live comparison waits on pairing.
 
 ## Rust (`cargo test`)
 

@@ -22,6 +22,8 @@ import { mapThread } from './map';
 import { rerunTest } from '../../link/src/rerun';
 import { startWatch } from './watch';
 import { captureBucketFromEnv, defaultPublishName, publishCapture } from './publish';
+import { readThreadViaRpc } from './rpc';
+import type { T3ThreadSnapshot } from './store';
 
 type Args = { command: string; flags: Map<string, string | true> };
 
@@ -143,7 +145,7 @@ async function verify(args: Args): Promise<void> {
     writeFileSync(rerunFile, lines.map((item) => JSON.stringify(item)).join('\n') + '\n');
   }
   console.log(`Sandbox re-run of "${run}" on a copy of ${path.basename(root)}: ${String(event.payload.status)}`);
-  importThread(args);
+  await importThread(args);
 }
 
 export type ImportOptions = {
@@ -155,6 +157,8 @@ export type ImportOptions = {
   rerun: string | null;
   noGit: boolean;
   noCheckpoints: boolean;
+  // Set when the thread was read through T3's RPC (`--via rpc`) instead of the database.
+  snapshot?: T3ThreadSnapshot;
 };
 
 export type ImportResult = { events: Event[]; edgeCount: number; rerunCount: number; capture: ReturnType<typeof mapThread>['capture'] };
@@ -162,12 +166,14 @@ export type ImportResult = { events: Event[]; edgeCount: number; rerunCount: num
 // The one import path. `import` and `watch` both call it, so a watched capture equals a one-shot import.
 export function runImport(options: ImportOptions): ImportResult {
   const { threadId, out } = options;
-  const db = openT3(options.db);
-  let snapshot;
-  try {
-    snapshot = readThread(db, threadId);
-  } finally {
-    db.close();
+  let snapshot = options.snapshot;
+  if (!snapshot) {
+    const db = openT3(options.db);
+    try {
+      snapshot = readThread(db, threadId);
+    } finally {
+      db.close();
+    }
   }
   const rootFlag = options.root;
   const { events, capture } = mapThread(snapshot, { root: rootFlag ? path.resolve(rootFlag) : undefined, checkpoints: !options.noCheckpoints });
@@ -233,11 +239,15 @@ function importOptions(args: Args, threadId: string): ImportOptions {
   };
 }
 
-function importThread(args: Args): void {
+async function importThread(args: Args): Promise<void> {
   const threadId = flag(args, 'thread');
   if (!threadId) throw new Error('import needs --thread <id>. Run `list` to find one.');
+  const via = flag(args, 'via') ?? 'db';
+  if (via !== 'db' && via !== 'rpc') throw new Error('--via must be db or rpc.');
   const out = outDir(args, threadId);
-  const { events, edgeCount, rerunCount, capture } = runImport(importOptions(args, threadId));
+  // `--via rpc` reads through T3's authenticated RPC (read-only methods only; pair once, see packages/t3/README.md).
+  const snapshot = via === 'rpc' ? await readThreadViaRpc(threadId) : undefined;
+  const { events, edgeCount, rerunCount, capture } = runImport({ ...importOptions(args, threadId), snapshot });
   const count = (type: string) => events.filter((event) => event.type === type).length;
   const tests = events.filter((event) => event.type === 'test' && event.source === 't3_code');
   console.log(`Imported T3 thread ${threadId} "${capture.t3.title}" into ${out}`);
@@ -317,7 +327,7 @@ async function publish(args: Args): Promise<void> {
 async function main(argv: readonly string[]): Promise<void> {
   const args = parseArgs(argv);
   if (args.command === 'list') list(args);
-  else if (args.command === 'import') importThread(args);
+  else if (args.command === 'import') await importThread(args);
   else if (args.command === 'verify') await verify(args);
   else if (args.command === 'watch') await watch(args);
   else if (args.command === 'save') save(args);

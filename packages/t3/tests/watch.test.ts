@@ -40,7 +40,7 @@ function create(): DatabaseSync {
     CREATE TABLE orchestration_v2_projection_turn_items (turn_item_id TEXT PRIMARY KEY, thread_id TEXT, run_id TEXT, ordinal INTEGER, type TEXT, status TEXT, updated_at TEXT, payload_json TEXT);
     CREATE TABLE orchestration_v2_projection_checkpoints (checkpoint_id TEXT PRIMARY KEY, thread_id TEXT, run_id TEXT, status TEXT, captured_at TEXT, payload_json TEXT);
     CREATE TABLE orchestration_events (sequence INTEGER PRIMARY KEY AUTOINCREMENT, event_id TEXT, stream_id TEXT, event_type TEXT, occurred_at TEXT, payload_json TEXT);
-    INSERT INTO effect_sql_migrations VALUES (69, 'x');
+    INSERT INTO effect_sql_migrations VALUES (72, 'x');
   `);
   db.prepare('INSERT INTO orchestration_events (event_id, event_type, occurred_at, payload_json) VALUES (?, ?, ?, ?)').run('e1', 'project.created', 't', JSON.stringify({ projectId: 'p1', title: 'demo', workspaceRoot: '/nonexistent/devlens-watch-test' }));
   db.prepare('INSERT INTO orchestration_v2_projection_threads VALUES (?, ?, ?, ?, ?, NULL, ?)').run(T, 'p1', 'Watch me', '2026-10-29T15:00:00.000Z', '2026-10-29T15:00:00.000Z', '{}');
