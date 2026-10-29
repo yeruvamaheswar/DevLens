@@ -28,7 +28,7 @@ Time now: 11:05 CDT · 4 h 25 min to freeze
 | REQ-5 | The adapter can read T3 through T3's supported RPC API, not only its internal database | user |
 | REQ-6 | The label changes from experimental to verified only when EVAL-1 to EVAL-12 pass | user |
 | NOT-1 | The sandbox gets no network and no writes outside its temp folder. The only new access is read-only `~/.rustup` and `~/.cargo`, and only for `cargo` commands | agent |
-| NOT-2 | DevLens never writes to T3's database, git refs, or calls a T3 RPC that changes state | agent |
+| NOT-2 | DevLens never writes to T3's database, git refs, or calls a T3 RPC that changes state. Exception (CR-13): one user-started, revocable, read-only pairing session for the RPC reader | agent; exception by user |
 | NOT-3 | Published captures live in private Supabase storage with RLS; only the server key reads them; no secret values in any capture | agent |
 | NOT-4 | No re-prompting to stage a failure. The take's chain is whatever happened | agent |
 
@@ -52,7 +52,7 @@ Time now: 11:05 CDT · 4 h 25 min to freeze
 | EVAL-4 | REQ-3 | Status: `test result: ok` → passed; `test result: FAILED` → failed; `error: could not compile` → failed | unit | pass 2026-10-29, capture.test.ts |
 | EVAL-5 | REQ-3, NOT-1 | Sandbox re-run of `cargo test --offline` on a tiny crate passes; the same run cannot read `~/.ssh`, reach the network, or write to `~/.cargo` | integration | pass 2026-10-29, rerun.test.ts; reviewed, bypass fixed in 6ae231a |
 | EVAL-6 | REQ-4, NOT-3 | `t3 publish` uploads a capture; the anon key cannot read it; the hosted `/api/journey` lists and loads it | integration + hosted smoke | local pass 2026-10-29 (next start, publish.test.ts); hosted smoke waits on Vercel env |
-| EVAL-7 | REQ-5, NOT-2 | The RPC reader yields the same events as the database reader for one thread, using read-only calls | integration | not run |
+| EVAL-7 | REQ-5, NOT-2 | The RPC reader yields the same events as the database reader for one thread, using read-only calls | integration | offline proxy pass 2026-10-29 (rpc.test.ts); live waits on pairing |
 | EVAL-8 | REQ-2 | Real take: every station cites real event ids; Uma's prompts have actor `developer`; provider and model shown | unit on the capture + human | not run |
 | EVAL-9 | REQ-2, REQ-3 | `t3 verify` on the take: sandbox re-run of the last passing `cargo test` passes | integration | not run |
 | EVAL-10 | REQ-2 | Clicking the first failing-test station seeks the window recording to within 2 s of that event | browser | not run |
@@ -112,9 +112,9 @@ Time now: 11:05 CDT · 4 h 25 min to freeze
 - Model: Claude (opus/high), time-boxed to 2:30 PM
 - Depends on: none (parallel with slice 3)
 - Files: `packages/t3/src/rpc.ts` (new), `packages/t3/src/cli.ts`, `packages/t3/tests/rpc.test.ts`, `packages/t3/README.md`
-- [ ] Find T3's RPC transport, auth, and read-only thread subscription in the installed T3 server · Claude (opus/high) · written finding in this page · none
-- [ ] `--via rpc` reader feeding the same mapper · Claude (opus/high) · EVAL-7 · revert
-- [ ] If pairing needs a token, Uma enters it in a private card · user · EVAL-7 · revoke the token in T3
+- [x] Find T3's RPC transport, auth, and read-only thread subscription in the installed T3 server · Claude (opus/high) · T3 updated itself to 0.1.5 (migration 72). Effect RPC over `ws://127.0.0.1:3773/ws?orchestrationProtocol=2&wsTicket=…`; `t3 pair` → bearer (scope `orchestration:read`, 30 days) → per-connection ticket. Read methods used: `subscribeThread`, `subscribeShell`, `getTurnItem` · none
+- [x] `--via rpc` reader feeding the same mapper · Claude (opus/high) · 135f84c; allowlist refuses other methods before sending; fake-server tests 4 pass; real server answers 401 without a token; checked migration moved to 72 after real imports (271 tool calls, 107 edits, 2 model switches). Review running · revert 135f84c
+- [ ] Pair once in your terminal: `~/.t3/bin/t3 pair --scope orchestration:read --ttl 5m --label DevLens`, then `T3_PAIRING_TOKEN=<token> npx tsx packages/t3/src/rpc.ts --pair` · user · EVAL-7: `npx tsx packages/t3/src/rpc.ts --thread <id> --compare` exits 0 · revoke the DevLens session in T3
 
 ### Slice 5: Real take (Uma)
 - Covers: REQ-2
@@ -144,3 +144,4 @@ Time now: 11:05 CDT · 4 h 25 min to freeze
 | ID | Date | Change | Affects | Approved |
 |---|---|---|---|---|
 | CR-12 | 2026-10-29 | T3 adapter: live capture, Rust test support with a read-only toolchain sandbox exception, hosted imports via private Supabase storage, RPC reader; promote to verified only if EVAL-1 to EVAL-12 pass. Freeze moves to 3:30 PM | contract DEC-7, EVAL-14, CR-11, NOT-3 | user, 11:12 |
+| CR-13 | 2026-10-29 | NOT-2 allows one user-started, revocable, read-only T3 pairing session (scope `orchestration:read`) for the RPC reader. DevLens still sends only allowlisted read methods | NOT-2, REQ-5 | user, 11:58 |
