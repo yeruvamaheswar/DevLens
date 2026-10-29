@@ -288,14 +288,15 @@ async function watch(args: Args): Promise<void> {
     importOnce: (threadId) => {
       const result = runImport(importOptions(args, threadId));
       // Questions: when a T3 run completes, start the DevLens question agent, as Claude Code's Stop hook does.
-      const root = threadRoot(args, threadId);
-      if (root) {
-        try {
+      try {
+        // Same root as the import: --root first, then the thread's worktree or project (review findings 3-4).
+        const root = flag(args, 'root') ?? threadRoot(args, threadId);
+        if (root) {
           const bridged = bridgeQuestions({ root, events: result.events, runs: result.capture.runs, started: askedAt });
           if (bridged.started.length) console.error(`${new Date().toISOString()} question agent started for ${bridged.started.join(', ')}`);
-        } catch (error) {
-          console.error(`${new Date().toISOString()} question bridge error: ${error instanceof Error ? error.message : String(error)}`);
         }
+      } catch (error) {
+        console.error(`${new Date().toISOString()} question bridge error: ${error instanceof Error ? error.message : String(error)}`);
       }
       return { events: result.events.length };
     },

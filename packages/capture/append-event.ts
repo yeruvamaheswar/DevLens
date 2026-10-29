@@ -6,7 +6,7 @@ function sleepMs(ms: number): void {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 }
 
-function acquireLock(lockPath: string): () => void {
+export function acquireLock(lockPath: string): () => void {
   mkdirSync(path.dirname(lockPath), { recursive: true });
   for (let attempt = 0; attempt < 100; attempt += 1) {
     try {

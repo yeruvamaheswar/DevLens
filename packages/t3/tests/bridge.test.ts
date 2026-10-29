@@ -41,13 +41,17 @@ describe('T3 question bridge (CR-12: questions for T3 sessions)', () => {
     const calls: string[] = [];
     const started = new Set<string>();
     const startAgent = (_d: string, session: string, stop: string) => calls.push(`${session}|${stop}`);
+    // First look: run 1 completed before the watcher started, so no question for it (review finding 2).
     const first = bridgeQuestions({ root, events: [ev('a'), ev('rerun', 'sandbox')], runs: [run(1, 'completed', 't'), run(2, 'running', null)], started, startAgent });
     expect(first.appended).toBe(1);
-    expect(calls).toEqual(['t3:th1|t3:th1:run:1']);
+    expect(calls).toEqual([]);
     const second = bridgeQuestions({ root, events: [ev('a'), ev('b')], runs: [run(1, 'completed', 't'), run(2, 'completed', 't2')], started, startAgent });
     expect(second.appended).toBe(1);
-    expect(calls).toEqual(['t3:th1|t3:th1:run:1', 't3:th1|t3:th1:run:2']);
-    const lines = readFileSync(path.join(root, '.devlens', 'events.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line).id);
-    expect(lines).toEqual(['a', 'b']);
+    expect(calls).toEqual(['t3:th1|t3:th1:run:2']);
+    bridgeQuestions({ root, events: [ev('a'), ev('b')], runs: [run(1, 'completed', 't'), run(2, 'completed', 't2')], started, startAgent });
+    expect(calls).toEqual(['t3:th1|t3:th1:run:2']);
+    const lines = readFileSync(path.join(root, '.devlens', 'events.jsonl'), 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+    expect(lines.map((line) => line.id)).toEqual(['a', 'b']);
+    expect(lines.map((line) => line.seq)).toEqual([1, 2]);
   });
 });
