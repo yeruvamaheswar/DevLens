@@ -100,6 +100,10 @@ Below the line, seven steps show the failure-to-fix chain: original failure, fir
 
 Sources: the golden Claude Code take (verified), any imported T3 Code thread (experimental, local), and saved T3 captures in `examples/t3-captures/` (experimental, committed, so a hosted build shows them). Open a source directly with `/recruiter?source=golden`, `/recruiter?source=t3:<thread id>`, or `/recruiter?source=t3-saved:sprintboard-rehearsal`. The saved rehearsal is a real T3 session on SprintBoard whose prompts were written by an agent, and the page says so. The live updates feed from CR-9 is below the journey.
 
+## Hosted demo (Vercel)
+
+The Vercel project `devlens` builds `main` on every push with `npm run build` (output `apps/web/.next`) and `DEVLENS_OFFLINE=1`. It needs no secrets. Uploads stay off because `DEVLENS_RECORD_ENABLED` is unset. Every deployment requires a Vercel login with access to the team. The hosted site shows the golden take and the saved T3 captures only. Local T3 imports in `.devlens/` are not deployed.
+
 ## T3 Code adapter (experimental)
 
 DevLens can read a T3 Code thread from the T3 server's local store, read-only, and show it on `/recruiter`. It works for any provider T3 runs (Claude, Codex, Cursor) and keeps the provider and model T3 recorded for each run. It is labelled experimental: the T3 store is internal to T3, and the adapter was checked only against T3 Code 0.1.3. Details, event mapping, and limits: [packages/t3/README.md](packages/t3/README.md). Demo steps: [plans/t3-integration.md](plans/t3-integration.md).
