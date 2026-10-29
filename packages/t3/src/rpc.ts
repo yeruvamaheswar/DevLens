@@ -3,7 +3,7 @@
 // Auth: a bearer access token from T3's own pairing flow (`t3 pair`), then a short-lived WebSocket ticket per connection.
 // NOT-2: DevLens sends only the methods in READ_ONLY_METHODS. Any other method throws before anything is sent.
 // Checked against T3 Code server 0.1.5 (orchestration protocol 2, database migration 72) on 2026-10-29.
-import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -15,7 +15,8 @@ export const DEFAULT_TOKEN_FILE = path.join(homedir(), '.devlens', 't3-rpc-token
 const RUNTIME_FILE = path.join(homedir(), '.t3', 'userdata', 'server-runtime.json');
 const DEFAULT_ORIGIN = 'http://127.0.0.1:3773';
 
-// The only RPC methods DevLens may send. All three read; none creates, changes, or deletes anything in T3.
+// The only RPC methods DevLens may send. None creates a thread, runs a command, or makes a user-visible change.
+// Reading a thread migrated from T3's v1 store may hydrate its transcript first, as T3's own UI does when it opens one.
 // T3's `orchestration:read` scope alone is not enough: it also allows calls such as `server.refreshProviders`.
 export const READ_ONLY_METHODS: ReadonlySet<string> = new Set(['orchestration.subscribeThread', 'orchestration.subscribeShell', 'orchestration.getTurnItem']);
 
@@ -186,7 +187,17 @@ export function defaultOrigin(): string {
   }
 }
 
+// Tokens go only to the local T3 server (review finding 1): a loopback host over http or https.
+const LOOPBACK = new Set(['127.0.0.1', 'localhost', '[::1]', '::1']);
+export function assertLocalOrigin(url: string): void {
+  const parsed = new URL(url);
+  if (!LOOPBACK.has(parsed.hostname) || !['http:', 'https:', 'ws:', 'wss:'].includes(parsed.protocol)) {
+    throw new T3RpcError(`Refusing to send a T3 token to ${parsed.protocol}//${parsed.hostname}: only the local T3 server (127.0.0.1, localhost, ::1) is allowed.`);
+  }
+}
+
 async function postJson(url: string, init: RequestInit, what: string): Promise<Json> {
+  assertLocalOrigin(url);
   const response = await fetch(url, { ...init, method: 'POST', signal: AbortSignal.timeout(15_000) });
   const body = record(await response.json().catch(() => ({})));
   if (!response.ok) throw new T3RpcError(`${what} failed with HTTP ${response.status}${str(body.code) ? ` (${body.code})` : ''}${str(body.reason) ? `: ${body.reason}` : ''}.`);
@@ -223,6 +234,7 @@ export function rpcUrl(origin: string, ticket: string): string {
   url.protocol = url.protocol === 'https:' ? 'wss:' : 'ws:';
   url.searchParams.set('orchestrationProtocol', String(ORCHESTRATION_PROTOCOL));
   url.searchParams.set('wsTicket', ticket);
+  assertLocalOrigin(url.href);
   return url.href;
 }
 
@@ -378,8 +390,10 @@ async function pair(tokenFile: string, pairingFile: string | undefined): Promise
   const pairingToken = str(process.env.T3_PAIRING_TOKEN?.trim()) ?? (pairingFile ? str(readFileSync(pairingFile, 'utf8').trim()) : null);
   if (!pairingToken) throw new Error('Set T3_PAIRING_TOKEN (or --pairing-token-file <path>) to the token that `t3 pair` printed. Do not pass it as an argument.');
   const result = await exchangePairingToken(defaultOrigin(), pairingToken);
-  if (result.scope !== READ_SCOPE) throw new Error(`T3 granted scope "${result.scope}", not "${READ_SCOPE}". Token not saved.`);
+  if (result.scope !== READ_SCOPE) throw new Error(`T3 granted scope "${result.scope}", not "${READ_SCOPE}". Token not saved. Revoke the "DevLens (read-only)" session in T3's connections list.`);
   mkdirSync(path.dirname(tokenFile), { recursive: true });
+  // Remove an older file first, so the token is never written into a file with looser permissions.
+  rmSync(tokenFile, { force: true });
   writeFileSync(tokenFile, `${result.accessToken}\n`, { mode: 0o600 });
   chmodSync(tokenFile, 0o600);
   console.log(`Paired with scope ${result.scope}. Token saved to ${tokenFile} (mode 600), expires in ${Math.round(result.expiresIn / 86400)} days. Revoke it in T3's connections list.`);

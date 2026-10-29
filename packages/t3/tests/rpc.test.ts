@@ -222,3 +222,15 @@ describe('T3 RPC reader (fake server)', () => {
     await expect(mintRpcTicket(origin, 'nope')).rejects.toThrow('HTTP 401 (invalid_credential)');
   });
 });
+
+describe('slice 4 review fix 1: tokens go only to the local T3 server', async () => {
+  const rpcModule = await import('../src/rpc');
+  it('refuses a non-loopback origin before any request', async () => {
+    for (const origin of ['http://evil.example', 'https://10.0.0.5:3773', 'http://127.0.0.1.evil.example']) {
+      expect(() => rpcModule.assertLocalOrigin(origin), origin).toThrow(/only the local T3 server/);
+      await expect(rpcModule.mintRpcTicket(origin, 'token-not-sent')).rejects.toThrow(/only the local T3 server/);
+      await expect(rpcModule.readThreadViaRpc('t1', { origin, accessToken: 'token-not-sent' })).rejects.toThrow(/only the local T3 server/);
+    }
+    for (const origin of ['http://127.0.0.1:3773', 'http://localhost:3773', 'http://[::1]:3773']) expect(() => rpcModule.assertLocalOrigin(origin), origin).not.toThrow();
+  });
+});

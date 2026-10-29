@@ -83,7 +83,9 @@ Every event keeps the T3 thread, run, and turn-item ids, and the provider's own 
 
 - `packages/t3/src/rpc.ts` reads a thread from the running T3 server through its authenticated WebSocket RPC instead of the database. Use it with `npm run t3 -- import --thread <id> --via rpc`.
 - Pair once: run `~/.t3/bin/t3 pair --scope orchestration:read --ttl 5m --label DevLens`, then `T3_PAIRING_TOKEN=<token> npx tsx packages/t3/src/rpc.ts --pair` within 5 minutes. This saves `~/.devlens/t3-rpc-token` (mode 600). Revoke it in T3's connections list.
-- Pairing creates one client session in T3's auth store. DevLens changes nothing else in T3.
+- Pairing creates one client session in T3's auth store. DevLens creates no threads, runs no commands, and makes no user-visible change in T3. Reading a thread migrated from T3's v1 store may hydrate its transcript, as T3's own UI does when it opens one.
+- T3 caps a stored body at 256 KB (command output, tool values, diffs), so a very long output can differ from the database reader in `--compare`. A handoff's summary is not sent over RPC.
+- Tokens are sent only to a loopback origin (127.0.0.1, localhost, ::1). Any other origin is refused before anything is sent.
 - DevLens sends only `orchestration.subscribeThread`, `orchestration.subscribeShell`, and `orchestration.getTurnItem`. Any other method is refused before it is sent. The `orchestration:read` scope alone would allow a few calls that are not pure reads, so this allowlist is the guard.
 - Compare with the database reader: `npx tsx packages/t3/src/rpc.ts --thread <id> --compare` (exit code 2 on any difference).
 - Checked against T3 server 0.1.5 (protocol 2, migration 72). The live comparison waits on pairing.
