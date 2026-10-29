@@ -174,7 +174,7 @@ describe('/record render (EVAL-27, EVAL-35)', () => {
 
   it('mentions score, rank, or verdict only to say there is none', () => {
     for (const page of Object.values(html)) {
-      const rest = page.replace('DevLens shows no score, rank, or verdict.', '').replace('No code, no score.', '');
+      const rest = page.replace('DevLens shows no score, rank, or verdict.', '').replace('No files, no diffs, no score.', '');
       expect(rest).not.toMatch(/score|rank|verdict/i);
     }
   });
@@ -186,7 +186,7 @@ describe('/record render (EVAL-27, EVAL-35)', () => {
     expect(switches(html.idle)[1]).toContain('Share updates with recruiter');
     expect(switches(html.idle)[1]).not.toContain('disabled');
     expect(switches(html.sharing)[1]).toContain('aria-checked="true"');
-    expect(html.idle).toContain('Facts from the session log (prompts, files changed, tests, answers) go to the recruiter page. No code, no score.');
+    expect(html.idle).toContain('Your prompts (word for word, secrets removed) and facts from the session log (files changed, tests, answers) go to the recruiter page. No files, no diffs, no score.');
     expect(html.idle).toContain('<a href="/recruiter">');
     expect(switches(html.unavailable)[1]).toContain('disabled');
     expect(html.unavailable).toContain('Unavailable');

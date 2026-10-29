@@ -210,7 +210,7 @@ footer{margin-top:3.5rem;padding-top:.8rem;border-top:1px solid var(--rule);font
 }
 </style>
 </head>
-<body data-hash="71734581bd7f" data-repo="DevLens">
+<body data-hash="d69b2046ee19" data-repo="DevLens">
 <script type="text/plain" id="src">---
 kind: plan
 title: DevLens Agent widget, /record redesign, recruiter updates (CR-8, CR-9)
@@ -250,7 +250,7 @@ Rules: agent stays off by default · `npm run demo` unchanged · no new npm pack
 | REQ-38 | Every update line is a fact built by fixed rules from the session log (prompts, files changed, test results, agent questions answered) and links to its event ids. | user |
 | REQ-39 | Sharing is one opt-in switch on `/record`, off by default. Each update or status reply also shows briefly in the widget, for example "Sent update to recruiter". | user |
 | REQ-40 | The demo uses a new, larger full-stack project (API, SQLite database, browser UI, tests) built with Node built-ins, so it needs no package install. | user (stack: agent) |
-| NOT-12 | A recruiter update never holds a score, rank, ratio, or verdict, and never holds code, diffs, or file contents. It may quote the start of the latest prompt (120 characters, redacted). | agent |
+| NOT-12 | A recruiter update never holds a score, rank, ratio, or verdict written by DevLens, and never holds code, diffs, or file contents. It shows each developer prompt word for word (secrets redacted, up to 2000 characters, at most 20 per entry), labelled as the developer's words (CR-10). | agent, changed by user 2026-10-28 |
 | NOT-11 | The pop-up never takes keyboard focus and never plays a sound. Focus moves to the widget only when the developer clicks it. | agent (from CR-7 "don't disturb") |
 
 ## Decisions
@@ -278,7 +278,7 @@ Rules: agent stays off by default · `npm run demo` unchanged · no new npm pack
 | EVAL-29 | REQ-27, REQ-28, REQ-29 | Live run with Terminal in front: a frame shows the pop-up bottom-right over Terminal; 10 s later a frame shows the pill with the count. No Dock icon appears. | screen frames | pass (2026-10-28, frames /tmp/devlens-int/frames and the take 2 video: pop-up bottom-right, then pill "1 question") |
 | EVAL-30 | NOT-11 | During the live run, `lsappinfo front` names Terminal before, during, and after the pop-up. | integration | pass with a fix (2026-10-28): a pop-up never took focus (Terminal stayed front); launch took focus once, fixed in f13b2ab to hand it back |
 | EVAL-31 | REQ-30 | After answering in the widget, an `answer` event with that text is in `.devlens/events.jsonl` and the pill count drops by one. | integration | pass (2026-10-28, live check: answer event written, count dropped; 3 answers in the take 2 run summary) |
-| EVAL-33 | REQ-36, REQ-38, NOT-12 | `npm run test:recruiter`: with sharing on and the gap passed, a Stop appends one update whose lines cite real event ids; with sharing off, or inside the gap, nothing is appended; no line matches the score, rank, verdict, or fix filter; no diff or file text appears. | unit | pass (2026-10-28, test:recruiter 34/34, test:capture 36/36) |
+| EVAL-33 | REQ-36, REQ-38, NOT-12 | `npm run test:recruiter`: with sharing on and the gap passed, a Stop appends one update whose lines cite real event ids; with sharing off, or inside the gap, nothing is appended; no DevLens-written line matches the score, rank, verdict, or fix filter; developer prompts appear verbatim and redacted (CR-10); no diff or file text appears. | unit | pass (2026-10-28, test:recruiter 37/37 after CR-10, test:capture 36/36) |
 | EVAL-34 | REQ-37 | `npm run test:recruiter`: `POST request_status` returns a status entry built from the events so far, and it is appended once. | unit | pass (2026-10-28, test:recruiter; live status reply in the take 2 video) |
 | EVAL-35 | REQ-35, REQ-39 | `npm run test:record`: the two capture rows, the state clock, the agent row, and the sharing switch render; with sharing off, no recruiter call is made. | unit | pass (2026-10-28, test:record 61/61) |
 | EVAL-36 | REQ-34, REQ-40 | The new video shows the developer's work full screen, the widget, a recruiter update, and an on-demand status reply. | human | not run (the user watches devlens-demo-recorder/out/devlens-fullstack-demo-1793241546273.mp4) |
@@ -343,6 +343,7 @@ Rules: agent stays off by default · `npm run demo` unchanged · no new npm pack
 |---|---|---|---|---|
 | CR-8 | 2026-10-28 | The pop-up and queue move from `/record` to a native floating widget at the bottom-right. `/record` keeps the switch and is redesigned (critique 21/40). | REQ-26, EVAL-25 | user approved in chat 2026-10-28 |
 | CR-9 | 2026-10-28 | Recruiter updates: periodic and on-demand facts on a local `/recruiter` page, opt-in, shown in the widget. | REQ-36 to REQ-39, NOT-12 | user approved in chat 2026-10-28 |
+| CR-10 | 2026-10-28 | The reviewer sees the developer's prompts: each update and status lists every developer prompt in its window, verbatim and redacted, instead of a 120-character excerpt. The sharing switch copy says so. | NOT-12, REQ-38, EVAL-33 | user asked in chat 2026-10-28 |
 
 ## Work
 ### Open
@@ -357,7 +358,7 @@ Rules: agent stays off by default · `npm run demo` unchanged · no new npm pack
     <div><span class="lbl">Status</span><div class="val" id="status"></div></div>
     <div><span class="lbl">Dated</span><div class="val" id="dated"></div></div>
     <div><span class="lbl">Entries done</span><div class="val" id="count"></div></div>
-    <div><span class="lbl">Page</span><div class="val hash">71734581bd7f</div></div>
+    <div><span class="lbl">Page</span><div class="val hash">d69b2046ee19</div></div>
   </header>
   <div class="layout">
     <nav class="contents" aria-label="Contents"><span class="lbl">Contents</span><ol id="toc"></ol></nav>
@@ -365,7 +366,7 @@ Rules: agent stays off by default · `npm run demo` unchanged · no new npm pack
       <div class="gutter" id="gutter" aria-hidden="true"></div>
       <section id="brief" class="sec" style="margin-top:0" aria-label="Brief"></section>
       <div id="sections"></div>
-      <footer>Generated from plans/agent-widget.md in DevLens by md-view.sh · built 2026-10-28 21:44 · page 71734581bd7f (source + template). Agents: edit agent-widget.md, then rebuild. Never edit this page.</footer>
+      <footer>Generated from plans/agent-widget.md in DevLens by md-view.sh · built 2026-10-28 22:37 · page d69b2046ee19 (source + template). Agents: edit agent-widget.md, then rebuild. Never edit this page.</footer>
     </main>
   </div>
 </div>

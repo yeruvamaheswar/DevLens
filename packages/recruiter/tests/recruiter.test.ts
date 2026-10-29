@@ -50,8 +50,8 @@ describe('buildEntry (pure rules)', () => {
     const entry = buildEntry(events, null, 'update', { now: at(8), id: 'u1' });
     expect(entry).not.toBeNull();
     expect(entry!.lines.map((line) => line.text)).toEqual([
-      'Working on: "Now add a total for the list view, my key is [REDACTED] thanks"',
-      '2 developer prompts',
+      'Make the sum endpoint return the right total',
+      'Now add a total for the list view, my key is [REDACTED] thanks',
       'Files changed: sum.js, util.js',
       'Tests: 1 failing → 4 passing',
       'Agent questions: 1 asked, 1 answered',
@@ -61,7 +61,8 @@ describe('buildEntry (pure rules)', () => {
       expect(line.cites.length).toBeGreaterThan(0);
       for (const cite of line.cites) expect(ids.has(cite)).toBe(true);
     }
-    expect(entry!.lines[0].cites).toEqual(['s1:UserPromptSubmit:p2']);
+    expect(entry!.lines[0]).toEqual({ text: 'Make the sum endpoint return the right total', cites: ['s1:UserPromptSubmit:p1'], prompt: true });
+    expect(entry!.lines[1].cites).toEqual(['s1:UserPromptSubmit:p2']);
     expect(entry!.lines[3].cites).toEqual(['s1:t1:post', 's1:t2:post']);
   });
 
@@ -70,50 +71,70 @@ describe('buildEntry (pure rules)', () => {
     for (const leak of ['SECRET_DIFF_TEXT', 'return a', 'FILE_BODY_TEXT', 'OUTPUT_BODY_TEXT', 'AssertionError', '/Users/someone', 'src/lib', 'sk-ant-']) expect(json).not.toContain(leak);
   });
 
-  it('quotes at most 120 characters of the latest prompt, flattened and redacted', () => {
-    const long = `GITHUB_TOKEN=ghp_abcdefghijklmnopqrstuvwxyz0123 then\n\n${'word '.repeat(60)}`;
+  it('shows each prompt verbatim with its line breaks, redacted, cut at 2000 characters', () => {
+    const long = `GITHUB_TOKEN=ghp_abcdefghijklmnopqrstuvwxyz0123 then\r\n\n\n\nnext\u0007 line  ${'word '.repeat(500)}`;
     const entry = buildEntry([ev('p', 1, 'developer', 'prompt', { prompt: long })], null, 'update', { now: at(2) })!;
-    const quote = /^Working on: "(.*)"$/.exec(entry.lines[0].text)![1];
-    expect(quote.startsWith('GITHUB_TOKEN=[REDACTED] then word')).toBe(true);
-    expect(quote).not.toContain('\n');
-    expect([...quote.replace(/…$/, '')].length).toBe(120);
-    expect(quote.endsWith('…')).toBe(true);
+    const text = entry.lines[0].text;
+    expect(entry.lines[0].prompt).toBe(true);
+    expect(text.startsWith('GITHUB_TOKEN=[REDACTED] then\n\nnext line word')).toBe(true);
+    expect([...text.replace(/…$/, '')].length).toBe(2000);
+    expect(text.endsWith('…')).toBe(true);
+  });
+
+  it('redacts pasted URL passwords, private keys, live keys, and "password is" phrases in prompts', () => {
+    const prompt = 'use postgres://app:hunter2pw@db.local/main and sk_live_abcdefgh12345678 and password is opensesame9\n-----BEGIN RSA PRIVATE KEY-----\nMIIEabc\n-----END RSA PRIVATE KEY-----';
+    const text = buildEntry([ev('p', 1, 'developer', 'prompt', { prompt })], null, 'update', { now: at(2) })!.lines[0].text;
+    for (const leak of ['hunter2pw', 'sk_live_abcdefgh', 'opensesame9', 'MIIEabc']) expect(text).not.toContain(leak);
+    expect(text).toContain('postgres://app:[REDACTED]@db.local/main');
+  });
+
+  it('a secret at the 2000-character cut is redacted whole, never split', () => {
+    const secret = 'zq9-longsecretvalue-4471';
+    const prompt = `${'a'.repeat(1990)} ${secret} tail`;
+    const text = buildEntry([ev('p', 1, 'developer', 'prompt', { prompt })], null, 'update', { now: at(2), redact: (t) => t.split(secret).join('[REDACTED]') })!.lines[0].text;
+    expect(text).not.toContain('zq9');
+  });
+
+  it('lists at most 20 prompts and counts the earlier ones', () => {
+    const many = Array.from({ length: 23 }, (_, i) => ev(`p${i}`, i + 1, 'developer', 'prompt', { prompt: `step ${i}` }));
+    const entry = buildEntry(many, null, 'status', { now: at(30) })!;
+    expect(entry.lines[0]).toEqual({ text: 'and 3 earlier developer prompts', cites: ['p0', 'p1', 'p2'] });
+    expect(entry.lines.filter((l) => l.prompt).map((l) => l.text)).toEqual(Array.from({ length: 20 }, (_, i) => `step ${i + 3}`));
   });
 
   it('uses env secrets through the redact option', () => {
     const entry = buildEntry([ev('p', 1, 'developer', 'prompt', { prompt: 'use hunter2-long-value here' })], null, 'update', { now: at(2), redact: (t) => t.split('hunter2-long-value').join('[REDACTED]') })!;
-    expect(entry.lines[0].text).toBe('Working on: "use [REDACTED] here"');
+    expect(entry.lines[0].text).toBe('use [REDACTED] here');
   });
 
-  it('keeps "fix" inside the quoted developer prompt, but never score, rank, or hire', () => {
-    const entry = buildEntry([ev('p1', 1, 'developer', 'prompt', { prompt: 'Fix the failing pagination test' })], null, 'update', { now: at(2) })!;
-    expect(entry.lines.map((l) => l.text)).toEqual(['Working on: "Fix the failing pagination test"', '1 developer prompt']);
-    const graded = buildEntry([ev('p1', 1, 'developer', 'prompt', { prompt: 'Grade my fix' })], null, 'update', { now: at(2) })!;
-    expect(graded.lines.map((l) => l.text)).toEqual(['1 developer prompt']);
+  it('shows the developer prompt as written, even with words the DevLens lines may not use', () => {
+    const entry = buildEntry([ev('p1', 1, 'developer', 'prompt', { prompt: 'Fix the ranking of urgent tickets' })], null, 'update', { now: at(2) })!;
+    expect(entry.lines).toEqual([{ text: 'Fix the ranking of urgent tickets', cites: ['p1'], prompt: true }]);
   });
 
   it('redacts env secret values from the prompt quote on the real send path', () => {
     const secret = 'zq9-longsecretvalue-4471';
     const dir = project({ sharing: '{"enabled":true}', events: [ev('s1:UserPromptSubmit:p1', 1, 'developer', 'prompt', { prompt: `deploy with ${secret} now` })] });
     const sent = maybeSendUpdate(dir, SESSION, { env: { DEVLENS_UPDATE_EVERY_MIN: '0', MY_API_KEY: secret }, now: at(2) }).sent!;
-    expect(sent.lines[0].text).toBe('Working on: "deploy with [REDACTED] now"');
+    expect(sent.lines[0].text).toBe('deploy with [REDACTED] now');
     expect(readFileSync(recruiterPath(dir), 'utf8')).not.toContain(secret);
   });
 
-  it('drops any line that matches the score, rank, hire, or fix filter, and keeps the rest', () => {
+  it('drops any DevLens-written line that matches the score, rank, hire, or fix filter, and keeps the rest', () => {
     const events = [
       ev('p1', 1, 'developer', 'prompt', { prompt: 'Please fix the ranking bug' }),
       ev('e1', 2, 'agent', 'file_edit', { files: ['fix-login.js', 'app.js'] }),
     ];
     const entry = buildEntry(events, null, 'update', { now: at(3) })!;
-    expect(entry.lines.map((l) => l.text)).toEqual(['1 developer prompt', 'Files changed: app.js']);
-    for (const line of entry.lines) expect(bannedReason(line.text)).toBeNull();
+    expect(entry.lines.map((l) => l.text)).toEqual(['Please fix the ranking bug', 'Files changed: app.js']);
+    expect(entry.lines[0].prompt).toBe(true);
+    for (const line of entry.lines.filter((l) => !l.prompt)) expect(bannedReason(line.text)).toBeNull();
   });
 
   it('no line in a full status matches the banned filter', () => {
     const entry = buildEntry(session(), null, 'status', { now: at(8) })!;
     expect(entry.lines.length).toBeGreaterThan(0);
-    for (const line of entry.lines) expect(bannedReason(line.text)).toBeNull();
+    for (const line of entry.lines.filter((l) => !l.prompt)) expect(bannedReason(line.text)).toBeNull();
   });
 
   it('returns no update when there is no new developer prompt since the last entry', () => {
@@ -121,7 +142,7 @@ describe('buildEntry (pure rules)', () => {
     expect(buildEntry([], null, 'update', { now: at(8) })).toBeNull();
     const since = buildEntry(session(), at(6).toISOString(), 'update', { now: at(8) })!;
     expect(since.since).toBe(at(6).toISOString());
-    expect(since.lines.map((l) => l.text)).toEqual(['Working on: "Now add a total for the list view, my key is [REDACTED] thanks"', '1 developer prompt']);
+    expect(since.lines.map((l) => l.text)).toEqual(['Now add a total for the list view, my key is [REDACTED] thanks']);
   });
 
   it('a status covers the whole session and ends with the last activity time', () => {
@@ -180,7 +201,7 @@ describe('store and Stop trigger', () => {
     expect(maybeSendUpdate(dir, SESSION, { env, now: at(12) }).skipped).toBe('inside_gap');
     const later = maybeSendUpdate(dir, SESSION, { env, now: at(19) });
     expect(later.sent?.since).toBe(at(8).toISOString());
-    expect(later.sent?.lines.map((l) => l.text)).toEqual(['Working on: "Next step"', '1 developer prompt']);
+    expect(later.sent?.lines.map((l) => l.text)).toEqual(['Next step']);
     expect(readEntries(dir)).toHaveLength(2);
   });
 

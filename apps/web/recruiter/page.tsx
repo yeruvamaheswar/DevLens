@@ -39,8 +39,15 @@ function Entry({ entry }: { entry: RecruiterEntry }) {
       ) : (
         <ul className={styles.lines}>
           {entry.lines.map((line, index) => (
-            <li key={index} className={styles.line}>
-              <span className={styles.text}>{line.text}</span>
+            <li key={index} className={line.prompt ? `${styles.line} ${styles.prompt}` : styles.line}>
+              {line.prompt ? (
+                <>
+                  <span className={styles.promptLabel}>Developer prompt</span>
+                  <blockquote className={styles.promptText}>{line.text}</blockquote>
+                </>
+              ) : (
+                <span className={styles.text}>{line.text}</span>
+              )}
               <span className={styles.cites}>
                 <span className="sr-only">Events: </span>
                 {line.cites.slice(0, MAX_CITES_SHOWN).map((cite) => <code key={cite} className={styles.cite}>{cite}</code>)}

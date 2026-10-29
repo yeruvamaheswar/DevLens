@@ -6,10 +6,12 @@ import { bannedReason, normalize } from '../../agent/src/validate';
 // NOT-12: no score, rank, ratio, or verdict; no code, diffs, file contents, or tool output text.
 
 export type EntryKind = 'update' | 'status';
-export type RecruiterLine = { text: string; cites: string[] };
+// `prompt: true` marks a developer prompt, shown verbatim (redacted) so the reviewer sees how the developer worked.
+export type RecruiterLine = { text: string; cites: string[]; prompt?: true };
 export type RecruiterEntry = { id: string; kind: EntryKind; ts: string; since: string | null; lines: RecruiterLine[] };
 
-export const QUOTE_CHARS = 120;
+export const PROMPT_CHARS = 2000;
+export const MAX_PROMPTS = 20;
 export const MAX_FILE_NAMES = 8;
 
 const CONTROL = /[\p{Cc}]/gu;
@@ -21,11 +23,23 @@ function isoSeconds(ts: string): string {
 
 const isPrompt = (event: Event) => event.actor === 'developer' && event.type === 'prompt';
 
-// Collapse whitespace and control characters, redact, then cut. Redacting before the cut keeps a secret whole when it is matched.
-export function quotePrompt(text: string, redact: (text: string) => string): string {
-  const flat = redact(normalize(text).replace(CONTROL, ' ').replace(/\s+/g, ' ').trim());
-  const chars = [...flat];
-  return chars.length > QUOTE_CHARS ? `${chars.slice(0, QUOTE_CHARS).join('')}…` : flat;
+// Extra patterns for free text a developer may paste into a prompt, beyond the capture redactor's named forms.
+const PROMPT_SECRETS: [RegExp, string][] = [
+  [/-----BEGIN [A-Z0-9 ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z0-9 ]*PRIVATE KEY-----|$)/g, '[REDACTED]'],
+  [/\b([a-z][a-z0-9+.-]*:\/\/[^\s:/@]+:)[^\s@/]+@/gi, '$1[REDACTED]@'],
+  [/\b(?:sk|rk|pk)_(?:live|test)_[A-Za-z0-9]{8,}/g, '[REDACTED]'],
+  [/\b(password|passwd|pwd|passphrase)(\s*(?:is|=|:)\s*)\S+/gi, '$1$2[REDACTED]'],
+];
+function redactPrompt(text: string, redact: (text: string) => string): string {
+  return PROMPT_SECRETS.reduce((out, [pattern, to]) => out.replace(pattern, to), redact(text));
+}
+
+// Redact the raw text, keep line breaks, drop other control characters, collapse runs of spaces, redact again, then cut.
+// Redacting before the cleanup matches secrets exactly as typed; redacting before the cut keeps a matched secret whole.
+export function promptText(text: string, redact: (text: string) => string): string {
+  const clean = normalize(redactPrompt(text, redact)).replace(/\r\n?/g, '\n').replace(/[^\P{Cc}\n]/gu, ' ').replace(/[^\S\n]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+  const chars = [...redactPrompt(clean, redact)];
+  return chars.length > PROMPT_CHARS ? `${chars.slice(0, PROMPT_CHARS).join('')}…` : chars.join('');
 }
 
 function baseName(file: string): string {
@@ -71,13 +85,15 @@ export function buildEntry(events: readonly Event[], sinceTs: string | null, kin
   const prompts = window.filter(isPrompt);
   if (kind === 'update' && prompts.length === 0) return null;
 
-  const lines: (RecruiterLine & { quote?: boolean })[] = [];
-  const latest = prompts.findLast((event) => typeof event.payload.prompt === 'string' && event.payload.prompt.trim().length > 0);
-  if (latest) {
-    const quote = quotePrompt(String(latest.payload.prompt), redact);
-    if (quote.length > 0) lines.push({ text: `Working on: "${quote}"`, cites: [latest.id], quote: true });
+  const lines: RecruiterLine[] = [];
+  // Every developer prompt in the window, verbatim and redacted, oldest first. Older ones beyond the cap become one count line.
+  const written = prompts.filter((event) => typeof event.payload.prompt === 'string' && event.payload.prompt.trim().length > 0);
+  const earlier = written.slice(0, Math.max(0, written.length - MAX_PROMPTS));
+  if (earlier.length > 0) lines.push({ text: `and ${plural(earlier.length, 'earlier developer prompt', 'earlier developer prompts')}`, cites: earlier.map((event) => event.id) });
+  for (const event of written.slice(earlier.length)) {
+    const text = promptText(String(event.payload.prompt), redact);
+    if (text.length > 0) lines.push({ text, cites: [event.id], prompt: true });
   }
-  if (prompts.length > 0) lines.push({ text: plural(prompts.length, 'developer prompt', 'developer prompts'), cites: prompts.map((event) => event.id) });
 
   const edits = window.filter((event) => event.type === 'file_edit');
   const names: string[] = [];
@@ -119,11 +135,9 @@ export function buildEntry(events: readonly Event[], sinceTs: string | null, kin
     lines.push({ text: `Last activity: ${isoSeconds(last.ts)}`, cites: [last.id] });
   }
 
-  // Last guard: every kept line passes the same filter the agent questions use.
-  // The prompt quote is the developer's own words, so "fix" may stay in it; score, rank, and hire never do.
-  const kept = lines
-    .filter((line) => bannedReason(line.text, line.quote ? ['fix'] : []) === null && line.cites.length > 0)
-    .map(({ text, cites }) => ({ text, cites }));
+  // Last guard: every DevLens-written line passes the same filter the agent questions use.
+  // A prompt line is the developer's own words, labelled as such on the page, so the filter does not edit it.
+  const kept = lines.filter((line) => line.cites.length > 0 && (line.prompt === true || bannedReason(line.text) === null));
   if (kind === 'update' && kept.length === 0) return null;
   const ts = now.toISOString();
   return { id: options.id ?? `${kind}:${ts}`, kind, ts, since: sinceTs, lines: kept };

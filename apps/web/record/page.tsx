@@ -305,7 +305,7 @@ export function Recorder({ session, agent, share }: { session: RecorderSession; 
               <p className="rec-status"><Mark kind={shareState.mark} /><b>{shareState.word}</b></p>
               {shareSnap.error ? <p className="rec-fix">{shareSnap.error}</p> : null}
               <p className="note">
-                Facts from the session log (prompts, files changed, tests, answers) go to the recruiter page. No code, no score.{' '}
+                Your prompts (word for word, secrets removed) and facts from the session log (files changed, tests, answers) go to the recruiter page. No files, no diffs, no score.{' '}
                 <a href="/recruiter">Open the recruiter page</a>
               </p>
             </div>

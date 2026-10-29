@@ -38,7 +38,7 @@ describe('recruiter trigger at Stop', () => {
     expect(result.updated).toBe(true);
     const [entry] = updates(dir);
     expect(entry.kind).toBe('update');
-    expect(entry.lines[0]).toEqual({ text: 'Working on: "Add the list total"', cites: ['s1:UserPromptSubmit:p1'] });
+    expect(entry.lines[0]).toEqual({ text: 'Add the list total', cites: ['s1:UserPromptSubmit:p1'], prompt: true });
   });
 
   it('with sharing off, appends nothing', () => {

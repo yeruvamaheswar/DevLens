@@ -15,8 +15,7 @@ A failure prints one warning to stderr and never stops the hook or the agent.
 
 ## Line formats
 Each line cites the event ids it rests on. A line that matches the agent's score, rank, hire, or fix filter is dropped.
-- `Working on: "<first 120 characters of the latest prompt, redacted>"`
-- `N developer prompts`
+- each developer prompt in the window, word for word with line breaks, secrets redacted, up to 2000 characters (`prompt: true`); at most 20, older ones as `and N earlier developer prompts`
 - `Files changed: a.js, b.js` (file names only, up to 8, then `and N more`)
 - `Tests: 1 failing → 4 passing` (first and last test in the window)
 - `Agent questions: 2 asked, 2 answered` (`, 1 skipped` when any)
