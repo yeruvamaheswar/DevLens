@@ -47,10 +47,10 @@ await check('replay fixture', async () => {
  assertGoldenChain(replay);
  if (offline) assert.equal(replay.mode, 'local fixture');
 });
-await check('WebM fixture header', async () => {
- const media = await readFile(goldenFile('session.webm'));
- assert.equal(media.subarray(0, 4).toString('hex'), '1a45dfa3');
- assert.equal(media.length, 16047324);
+await check('MP4 fixture header', async () => {
+ const media = await readFile(goldenFile('playback.mp4'));
+ assert.equal(media.subarray(4, 8).toString('latin1'), 'ftyp');
+ assert.equal(media.length, 17915689);
 });
 const liveChecks = ['Supabase fixture', 'RLS insert denial', 'signed private media'];
 const reason = offline ? 'offline requested' : !process.env.SUPABASE_SECRET_KEY ? 'SUPABASE_SECRET_KEY absent' : undefined;

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,62 +22,33 @@ const SECRET_PATTERNS: readonly { name: string; re: RegExp }[] = [
   { name: 'JWT', re: /\beyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/ },
 ];
 
-const EBML_ID = 0x1a45dfa3;
-const SEGMENT_ID = 0x18538067;
-const MAX_WEBM_BYTES = 50 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+const MP4_TOP_BOXES = ['ftyp', 'moov', 'mdat'];
 
-type Vint = { value: number; next: number; unknown: boolean };
-
-function readVint(bytes: Buffer, offset: number, keepMarker: boolean): Vint | null {
-  if (offset >= bytes.length) return null;
-  const first = bytes[offset] ?? 0;
-  if (first === 0) return null;
-  let mask = 0x80;
-  let length = 1;
-  while (length <= 8 && (first & mask) === 0) {
-    mask >>= 1;
-    length += 1;
-  }
-  if (length > 8 || offset + length > bytes.length) return null;
-  let unknown = false;
-  if (!keepMarker) {
-    unknown = (first & (mask - 1)) === mask - 1;
-    for (let i = 1; i < length; i += 1) {
-      if (bytes[offset + i] !== 0xff) unknown = false;
-    }
-  }
-  let value = keepMarker ? first : first & (mask - 1);
-  for (let i = 1; i < length; i += 1) value = value * 256 + (bytes[offset + i] ?? 0);
-  if (!Number.isSafeInteger(value)) return null;
-  return { value, next: offset + length, unknown };
-}
-
-export function webmProblem(bytes: Buffer): string | null {
-  if (bytes.length === 0) return 'WebM is empty';
-  if (bytes.length >= MAX_WEBM_BYTES) return 'WebM is 50 MB or larger';
+// The golden playback is the blurred H.264 MP4 (see plans/take-ingest-contract.md). Structure only: no decode.
+export function mp4Problem(bytes: Buffer): string | null {
+  if (bytes.length === 0) return 'playback.mp4 is empty';
+  if (bytes.length >= MAX_VIDEO_BYTES) return 'playback.mp4 is 50 MB or larger';
+  if (bytes.subarray(4, 8).toString('latin1') !== 'ftyp') return 'playback.mp4 is not an MP4 file';
+  const seen = new Set<string>();
   let offset = 0;
-  let sawEbml = false;
-  let sawWebm = false;
-  let sawSegment = false;
-  while (offset + 2 <= bytes.length) {
-    const id = readVint(bytes, offset, true);
-    if (!id) return 'WebM is not a decodable file';
-    const size = readVint(bytes, id.next, false);
-    if (!size) return 'WebM is not a decodable file';
-    if (offset === 0 && id.value !== EBML_ID) return 'WebM is not a decodable file';
-    if (id.value === EBML_ID) {
-      sawEbml = true;
-      if (!size.unknown && size.value >= 0 && size.next + size.value <= bytes.length) {
-        if (bytes.subarray(size.next, size.next + size.value).includes(Buffer.from('webm'))) sawWebm = true;
-      }
+  while (offset + 8 <= bytes.length) {
+    let size = bytes.readUInt32BE(offset);
+    const type = bytes.subarray(offset + 4, offset + 8).toString('latin1');
+    let header = 8;
+    if (size === 1) {
+      if (offset + 16 > bytes.length) return 'playback.mp4 has a truncated box';
+      size = Number(bytes.readBigUInt64BE(offset + 8));
+      header = 16;
+    } else if (size === 0) {
+      size = bytes.length - offset;
     }
-    if (id.value === SEGMENT_ID) sawSegment = true;
-    if (size.unknown || id.value === SEGMENT_ID) break;
-    const next = size.next + size.value;
-    if (next <= offset || next > bytes.length) return 'WebM is not a decodable file';
-    offset = next;
+    if (size < header || offset + size > bytes.length) return 'playback.mp4 has a box that runs past the end of the file';
+    seen.add(type);
+    offset += size;
   }
-  if (!sawEbml || !sawWebm || !sawSegment) return 'WebM is not a decodable file';
+  if (offset !== bytes.length) return 'playback.mp4 has trailing bytes';
+  if (!MP4_TOP_BOXES.every((box) => seen.has(box))) return 'playback.mp4 is missing ftyp, moov, or mdat';
   return null;
 }
 
@@ -120,7 +92,7 @@ function howToRecord(): void {
   console.error('golden fixture not recorded yet');
   console.error('How to record: follow examples/broken-api/RECORDING.md.');
   console.error('From the repo root, run: node examples/broken-api/scripts/take-setup.mjs');
-  console.error('Open /record, record the code window, then copy .devlens/events.jsonl to examples/broken-api/fixtures/golden/session.jsonl and the reviewed WebM to examples/broken-api/fixtures/golden/session.webm.');
+  console.error('Open /record, record the code window, then copy .devlens/events.jsonl to examples/broken-api/fixtures/golden/session.jsonl and the blurred, reviewed MP4 to examples/broken-api/fixtures/golden/playback.mp4.');
   console.error('Run: npm run fixture:verify -- broken-api');
 }
 
@@ -132,8 +104,8 @@ function main(): void {
   const here = path.dirname(fileURLToPath(import.meta.url));
   const goldenDir = path.join(here, '..', 'fixtures', 'golden');
   const jsonlPath = path.join(goldenDir, 'session.jsonl');
-  const webmPath = path.join(goldenDir, 'session.webm');
-  if (!existsSync(jsonlPath) || !existsSync(webmPath)) {
+  const videoPath = path.join(goldenDir, 'playback.mp4');
+  if (!existsSync(jsonlPath) || !existsSync(videoPath)) {
     howToRecord();
     process.exit(1);
   }
@@ -198,7 +170,7 @@ function main(): void {
   }
 
   const metaPath = path.join(goldenDir, 'meta.json');
-  if (!existsSync(metaPath)) problems.push('meta.json is missing; copy the recording meta.json from private storage next to session.webm');
+  if (!existsSync(metaPath)) problems.push('meta.json is missing; copy the recording meta.json from private storage next to playback.mp4');
   else {
     try {
       const meta = JSON.parse(readFileSync(metaPath, 'utf8')) as RecordingMeta;
@@ -208,20 +180,17 @@ function main(): void {
       if (outside.length > 0) problems.push(`${outside.length} event(s) fall outside the recording window in meta.json`);
       if (windowMs == null || windowMs <= 0) problems.push('meta.json has no usable recording window');
       if (meta.audio_tracks !== 0 || meta.video_tracks !== 1 || meta.consent !== true) problems.push('meta.json does not show consent, one video track, and no audio');
-      if (meta.bytes == null || meta.bytes !== statSync(webmPath).size) problems.push('session.webm size does not match meta.json bytes');
+      if (meta.bytes == null || meta.bytes !== statSync(videoPath).size) problems.push('playback.mp4 size does not match meta.json bytes');
       if (meta.mode !== 'window' || meta.display_surface !== 'window') problems.push('meta.json is not a window-mode take of one window');
-      if (typeof meta.recording_id !== 'string' || meta.recording_ref !== `${meta.recording_id}/take.webm`) problems.push('meta.json recording_ref does not match recording_id/take.webm');
+      const sha12 = createHash('sha256').update(readFileSync(videoPath)).digest('hex').slice(0, 12);
+      if (typeof meta.recording_id !== 'string' || meta.recording_ref !== `takes/golden-broken-api/${sha12}.mp4`) problems.push(`meta.json recording_ref does not match the playback file (expected takes/golden-broken-api/${sha12}.mp4)`);
     } catch {
       problems.push('meta.json is not valid JSON');
     }
   }
 
-  const webmBytes = statSync(webmPath).size;
-  if (webmBytes >= MAX_WEBM_BYTES) problems.push('WebM is 50 MB or larger');
-  else {
-    const problem = webmProblem(readFileSync(webmPath));
-    if (problem) problems.push(problem);
-  }
+  const problem = mp4Problem(readFileSync(videoPath));
+  if (problem) problems.push(problem);
 
   if (problems.length > 0) {
     for (const problem of problems) console.error(`FAIL: ${problem}`);

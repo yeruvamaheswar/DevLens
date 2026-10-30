@@ -113,7 +113,7 @@ It shows the golden take from local fixtures with no network. For its steps, wor
 |---|---|
 | Take library and the Full-Stack switch | Not shown |
 | Supabase and Vercel path | Not exercised |
-| Blurred playback copy | **Not used.** The offline demo and the `golden` picker row play the local `session.webm`, which is unblurred and shows the user and machine name. Do not use the fallback in front of outside viewers until the public golden video is replaced (migration plan R-1) |
+| Blurred playback copy | Used. The offline demo and the `golden` picker row now play the blurred `fixtures/golden/playback.mp4`, the same file the recruiter page serves. The old unblurred `session.webm` is removed from the working tree; it stays in git history (commit `2d36a04`) |
 
 ## 6. Expected results (when P0 passes)
 
