@@ -260,7 +260,6 @@ Resolved on 2026-10-29: the videos were blurred before publishing. The menu bar,
 | The public repo holds the author's home path in `golden/session.jsonl` raw payloads and an email in `golden/git-log.txt` | Personal data in a public repo | The owner decides. Possible fix: scrub `payload.raw` paths and the email in the fixture, then re-run `fixture:verify` |
 | `GET /api/replay` has no authentication. `POST /api/agent` and `/api/recruiter` check only the content type. `next dev` also listens on the network interface | Anyone on the venue network can reach the dev server | Present on a trusted network, or start Next.js bound to `127.0.0.1` |
 | Leftover `next dev` processes block a new server (seen on 2026-10-29 on ports 3100 and 3300) | The demo will not start | Run the pre-flight `ps` check and stop them |
-| No license file | Readers cannot reuse the code. This weakens open-source credibility | The owner picks a license |
 | A cold `npm install` from a fresh clone has not been tested. The 2026-10-29 check used a clean export of `HEAD` with existing `node_modules` | A fresh laptop may hit an install problem | Run the Quick Start once on a fresh clone before the event |
 | The golden take's post-session answers are "nope" and "not sure" | They read as flippant on a large screen | Be ready to explain: real answers, typed after the session, quoted as written |
 

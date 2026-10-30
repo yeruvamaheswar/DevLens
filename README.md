@@ -435,4 +435,4 @@ There is no contributing guide yet. Before you open a pull request, run `npm run
 
 ## License
 
-No license file has been published. Until one is added, default copyright applies, and the code is not licensed for reuse.
+[MIT](LICENSE). Copyright (c) 2026 Yeruva Uma Maheswar Reddy.
