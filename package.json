@@ -29,7 +29,9 @@
     "widget": "npm run -s widget:build && .build/devlens-widget",
     "test:t3": "vitest run packages/t3",
     "test:journey": "vitest run apps/web/journey",
-    "t3": "tsx packages/t3/src/cli.ts"
+    "t3": "tsx packages/t3/src/cli.ts",
+    "ingest": "tsx packages/cli/src/ingest.ts",
+    "test:ingest": "vitest run packages/cli/tests/ingest.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.0",

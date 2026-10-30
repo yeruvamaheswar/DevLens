@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { JourneySourceRow, JourneyResponse } from '../journey/sources';
 import { journeyLayout } from '../journey/layout';
+import { takeLabels } from '../journey/takes';
 import { ChainStrip, Chip, EvidencePanel, JourneyLine, Legend, clock, journeyFacts } from '../journey/journey';
 import styles from './page.module.css';
 
@@ -140,6 +141,11 @@ export function JourneySection() {
             <Chip kind={journey.source.status === 'verified' ? 'observed' : 'unknown'} text={journey.source.status === 'verified' ? 'Verified capture' : 'Experimental capture'} />{' '}
             {live ? <span className={styles.liveChip} role="status">Live</span> : null} {journey.source.provenance_note}
           </p>
+          {journey.source.take ? (
+            <ul className={styles.takeLabels} aria-label="About this take">
+              {takeLabels(journey.source, data?.events ?? []).map((line) => <li key={line}>{line}</li>)}
+            </ul>
+          ) : null}
           <dl className={styles.facts}>
             {journeyFacts(journey).map((fact) => (
               <div key={fact.label}>

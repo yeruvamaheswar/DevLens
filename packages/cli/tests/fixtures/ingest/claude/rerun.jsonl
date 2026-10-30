@@ -1,0 +1,1 @@
+{"id":"sandbox:ses-a:toolu_3:post:r1","session_id":"ses-a","project_id":"fixture","ts":"2026-10-26T15:10:00.000Z","seq":1,"actor":"ci","type":"test","source":"sandbox","provenance":"observed","recording_ref":null,"media_offset_ms":null,"payload":{"status":"passed","command":"npm test","output":"ok","signal":"rerun","rerun_of":"ses-a:toolu_3:post"}}

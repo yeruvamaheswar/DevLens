@@ -1,0 +1,204 @@
+{
+  "takes": [
+    {
+      "id": "golden-broken-api",
+      "label": "Broken API fix (golden take)",
+      "adapter": "claude_code_hook",
+      "capture_status": "verified",
+      "authorship": "human",
+      "authorship_note": null,
+      "scenario": "examples/broken-api",
+      "session_ids": [
+        "ec6f600a-3902-459e-8769-3c13e7361948",
+        "44a60462-1d30-4fa3-8c72-dbc789421a38"
+      ],
+      "events": [
+        "examples/broken-api/fixtures/golden/session.jsonl"
+      ],
+      "edges": null,
+      "rerun": "examples/broken-api/fixtures/golden/rerun.jsonl",
+      "coverage": {
+        "unknowns": [],
+        "not_captured": []
+      },
+      "verification": "rerun_passed",
+      "expected": {
+        "events": 30
+      },
+      "recording": {
+        "id": "golden-broken-api-playback",
+        "playback": ".devlens/ingest/golden-broken-api/playback.mp4",
+        "source": "examples/broken-api/fixtures/golden/session.webm",
+        "source_sha256": "f718ffb052c2db355377073ba0db85a5739942e90fdb1c757f9789cb4c1e9567",
+        "mode": "window",
+        "consent": true,
+        "sync": {
+          "basis": "media_recorder",
+          "wall_start_ms": 1793117455405,
+          "uncertainty_ms": 0,
+          "anchors": []
+        },
+        "redaction": {
+          "method": "apple-vision-ocr + ffmpeg boxblur",
+          "spans": 48,
+          "verified": {
+            "fps": 6,
+            "offset_s": 0.05,
+            "pattern": "\\bumay?\\b|umay|yeru|mahes|macbook|mac mini|imac\\b|munna|reddy|maverick|(?-i:/Users/)|@gmail|[a-z0-9._%+-]+@[a-z0-9-]+\\.(com|org|net|io)\\b",
+            "matches": 0
+          },
+          "residual_note": "Still visible: the macOS per-user temp folder code (/private/var/folders/c4/zd_gcgn…/T/) and Claude session ids. Neither is a name. The title bar is blurred for the whole video."
+        }
+      },
+      "content_reviewed_at": "2026-10-30T01:33:27Z"
+    },
+    {
+      "id": "fullstack-take-2",
+      "label": "Full-Stack tickets app, take 2",
+      "adapter": "claude_code_hook",
+      "capture_status": "verified",
+      "authorship": "scripted",
+      "authorship_note": "The prompts and answers were typed by the demo recorder script.",
+      "scenario": "devlens-fullstack-demo",
+      "session_ids": [
+        "a04c678d-a85d-4fa6-bcae-bb35723fac7e"
+      ],
+      "events": [
+        "~/Code-Git-Repos/devlens-demo-recorder/out/rescued-tmp-backups/devlens-demo-backup-1793245064520/events.jsonl"
+      ],
+      "edges": null,
+      "rerun": null,
+      "coverage": {
+        "unknowns": [
+          "No independent re-run.",
+          "Video clock derived from the recorder and checked at 2 moments (21 s, 51.5 s); no check after 52 s."
+        ],
+        "not_captured": []
+      },
+      "verification": "none",
+      "expected": {
+        "events": 90
+      },
+      "recording": {
+        "id": "fullstack-take-2-playback",
+        "playback": ".devlens/ingest/fullstack-take-2/playback.mp4",
+        "source": "~/Code-Git-Repos/devlens-demo-recorder/out/devlens-fullstack-demo-1793241546273.mp4",
+        "source_sha256": "490967b67921acab5d58874cd15074203c78744f73ab66538fe7e33cbf22ae52",
+        "mode": "desktop",
+        "consent": true,
+        "sync": {
+          "basis": "recorder_clock_calibrated",
+          "wall_start_ms": 1793241549673,
+          "uncertainty_ms": 400,
+          "anchors": [
+            {
+              "event_id": "a04c678d-a85d-4fa6-bcae-bb35723fac7e:toolu_01MQzC568DuKo26YE2Wp4ho7:pre",
+              "expected_video_s": 21.0,
+              "observed_video_s": 20.9
+            },
+            {
+              "event_id": "a04c678d-a85d-4fa6-bcae-bb35723fac7e:toolu_01DKuxaEsn2Jr7iCMHVahonn:post",
+              "expected_video_s": 51.5,
+              "observed_video_s": 51.6
+            }
+          ]
+        },
+        "redaction": {
+          "method": "apple-vision-ocr + ffmpeg boxblur",
+          "spans": 7,
+          "verified": {
+            "fps": 4,
+            "offset_s": 0.19,
+            "pattern": "\\bumay?\\b|umay|yeru|mahes|macbook|mac mini|imac\\b|munna|reddy|maverick|(?-i:/Users/)|@gmail|[a-z0-9._%+-]+@[a-z0-9-]+\\.(com|org|net|io)\\b",
+            "matches": 0
+          },
+          "residual_note": "Blurred by a peer session (its own scan: 0 matches), then re-scanned independently here with different sampling: 0 matches over 1216 frames, frame count equal to the original. Possible residuals that are not names: the macOS temp folder code and Claude session ids."
+        }
+      },
+      "content_reviewed_at": "2026-10-30T02:58:42Z"
+    },
+    {
+      "id": "t3-video-take",
+      "label": "T3 Code thread, Build Video Take Task Manager",
+      "adapter": "t3_code",
+      "capture_status": "experimental",
+      "authorship": "scripted",
+      "authorship_note": "The prompts and answers were typed by the demo recorder script.",
+      "scenario": "devlens-t3-fullstack",
+      "session_ids": [
+        "t3:mcp:launch:2b44bbadd974e9a2199955f098401b4428a8b27b7971a088d5e9db7838fba8bc"
+      ],
+      "events": [
+        "~/Code-Git-Repos/DevLens-t3-fullstack/.devlens/t3/mcp:launch:2b44bbadd974e9a2199955f098401b4428a8b27b7971a088d5e9db7838fba8bc/events.jsonl"
+      ],
+      "edges": "~/Code-Git-Repos/DevLens-t3-fullstack/.devlens/t3/mcp:launch:2b44bbadd974e9a2199955f098401b4428a8b27b7971a088d5e9db7838fba8bc/edges.jsonl",
+      "rerun": null,
+      "coverage": {
+        "unknowns": [
+          "No independent re-run.",
+          "Video clock not checked; seek is off."
+        ],
+        "not_captured": []
+      },
+      "verification": "none",
+      "expected": {
+        "events": 66
+      },
+      "recording": {
+        "id": "t3-video-take-playback",
+        "playback": ".devlens/ingest/t3-video-take/playback.mp4",
+        "source": "~/Code-Git-Repos/devlens-demo-recorder/out/devlens-t3-demo-raw-1793307643196.mp4",
+        "source_sha256": "ff5c748a44ab2bd484e290dc9600e8e886b1c133d415b1a9112d12b2e1be1e57",
+        "mode": "desktop",
+        "consent": true,
+        "sync": {
+          "basis": "recorder_timeline_uncalibrated",
+          "wall_start_ms": null,
+          "uncertainty_ms": null,
+          "anchors": []
+        },
+        "redaction": {
+          "method": "apple-vision-ocr + ffmpeg boxblur",
+          "spans": 7,
+          "verified": {
+            "fps": 4,
+            "offset_s": 0.19,
+            "pattern": "\\bumay?\\b|umay|yeru|mahes|macbook|mac mini|imac\\b|munna|reddy|maverick|(?-i:/Users/)|@gmail|[a-z0-9._%+-]+@[a-z0-9-]+\\.(com|org|net|io)\\b",
+            "matches": 0
+          },
+          "residual_note": "Blurred by a peer session (its own scan: 0 matches), then re-scanned independently here with different sampling: 0 matches over 1978 frames, frame count equal to the original. Possible residuals that are not names: the macOS temp folder code and Claude session ids."
+        }
+      },
+      "content_reviewed_at": "2026-10-30T02:58:42Z"
+    },
+    {
+      "id": "t3-take-3",
+      "label": "T3 Code thread, Task Manager build, take 3",
+      "adapter": "t3_code",
+      "capture_status": "experimental",
+      "authorship": "scripted",
+      "authorship_note": "The prompts were written by the Tech Lead agent.",
+      "scenario": "devlens-t3-fullstack",
+      "session_ids": [
+        "t3:mcp:launch:a483250235ec2180f06b0fe017765fb29edfe99bc0988de2d676b30e4ec3852c"
+      ],
+      "events": [
+        "~/Code-Git-Repos/DevLens-t3-fullstack/examples/t3-captures/t3-fullstack-take-3/events.jsonl"
+      ],
+      "edges": "~/Code-Git-Repos/DevLens-t3-fullstack/examples/t3-captures/t3-fullstack-take-3/edges.jsonl",
+      "rerun": "~/Code-Git-Repos/DevLens-t3-fullstack/examples/t3-captures/t3-fullstack-take-3/rerun.jsonl",
+      "coverage": {
+        "unknowns": [],
+        "not_captured": [
+          "No playback recording: the take's video shows the Tech Lead thread, not this coding thread."
+        ]
+      },
+      "verification": "rerun_passed",
+      "expected": {
+        "events": 53
+      },
+      "recording": null,
+      "content_reviewed_at": "2026-10-30T01:36:51Z"
+    }
+  ]
+}

@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { webCaptureBucket } from '../../../../../packages/t3/src/publish';
 import { captureDir, publishedName } from '../../../journey/sources';
+import { takeId, takeMedia, webTakeStore } from '../../../journey/takes';
 import { loadRepoEnv } from '../../recordings/storage';
 
 export const runtime = 'nodejs';
@@ -12,6 +13,11 @@ const SIGNED_URL_SECONDS = 600;
 // A published capture redirects to a short-lived signed URL for its private object; the bucket is never public.
 export async function GET(request: Request) {
   const key = new URL(request.url).searchParams.get('source') ?? '';
+  // A take is a row in Supabase. The signed object path comes from its recording row, never from the request.
+  if (takeId(key)) {
+    loadRepoEnv();
+    return takeMedia(key, webTakeStore());
+  }
   const name = publishedName(key);
   if (name) {
     loadRepoEnv();

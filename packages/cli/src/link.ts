@@ -14,8 +14,8 @@ import { dedupeEvents, linkEvents } from '../../link/src/rules';
 const PROJECT_HOST = 'hivfaqlabtbrhrviwrrm.supabase.co';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..');
 
-type Loaded = { event: Event; order: number };
-type SessionPlan = { sessionId: string; events: Event[]; edges: Edge[] };
+export type Loaded = { event: Event; order: number };
+export type SessionPlan = { sessionId: string; events: Event[]; edges: Edge[] };
 type Plan = { events: Event[]; edges: Edge[]; sessions: SessionPlan[] };
 type RpcResult = { data: unknown; error: { message?: string; code?: string } | null };
 export type RpcClient = { rpc(fn: string, args: Record<string, unknown>): PromiseLike<RpcResult> };
@@ -61,7 +61,7 @@ export function parseLinkArgs(argv: readonly string[]): { fixture: boolean; dryR
   return { fixture, dryRun, events, rerun, recording };
 }
 
-async function readJsonl(file: string, orderStart: number): Promise<Loaded[]> {
+export async function readJsonl(file: string, orderStart: number): Promise<Loaded[]> {
   let text = '';
   try { text = await readFile(file, 'utf8'); } catch { throw new Error(`Cannot read ${path.basename(file)}`); }
   const loaded: Loaded[] = [];
@@ -120,7 +120,7 @@ export function planSession(loaded: readonly Loaded[]): Plan {
   return { events: sessions.flatMap((s) => s.events), edges: sessions.flatMap((s) => s.edges), sessions };
 }
 
-function eventRow(event: Event) {
+export function eventRow(event: Event) {
   return {
     id: event.id,
     session_id: event.session_id,
@@ -138,7 +138,7 @@ function eventRow(event: Event) {
   };
 }
 
-function edgeRow(edge: Edge) {
+export function edgeRow(edge: Edge) {
   return {
     id: edge.id,
     src: edge.src,
@@ -150,7 +150,7 @@ function edgeRow(edge: Edge) {
   };
 }
 
-function isMissingFunction(error: { message?: string; code?: string }): boolean {
+export function isMissingFunction(error: { message?: string; code?: string }): boolean {
   return error.code === 'PGRST202' || error.code === '42883' || /could not find the function|function .* does not exist/i.test(error.message ?? '');
 }
 

@@ -224,6 +224,14 @@
   max-width: 110ch;
 }
 
+.takeLabels {
+  margin: 0;
+  padding-left: var(--s4);
+  font-size: var(--t-sm);
+  color: var(--muted);
+  max-width: 110ch;
+}
+
 .facts {
   display: grid;
   grid-template-columns: repeat(8, minmax(0, 1fr)) minmax(0, 2.4fr);

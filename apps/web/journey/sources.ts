@@ -9,6 +9,7 @@ import { goldenFile, goldenLabel, localGoldenReplay } from '../../../packages/co
 import { isPublishedName, webCaptureBucket, type CaptureBucket } from '../../../packages/t3/src/publish';
 import { buildReplayView, redactPaths } from '../replay/view';
 import { buildJourney, type Journey, type JourneySourceMeta } from './build';
+import { listTakeRows, loadTake, webTakeStore, type TakeStore } from './takes';
 
 export type JourneySourceRow = { key: string; label: string; status: JourneySourceMeta['status']; adapter: JourneySourceMeta['adapter'] };
 export type JourneyResponse = { journey: Journey; events: Event[]; edges: Edge[] };
@@ -109,9 +110,14 @@ async function publishedCaptures(bucket: CaptureBucket | null) {
   return rows.flat();
 }
 
-export async function listSources(bucket: CaptureBucket | null = webCaptureBucket()): Promise<JourneySourceRow[]> {
+// Takes come from the same server key as the bucket. An explicit bucket (tests, callers that choose) leaves takes off unless passed.
+export async function listSources(bucket: CaptureBucket | null | undefined = undefined, takes: TakeStore | null = bucket === undefined ? webTakeStore() : null): Promise<JourneySourceRow[]> {
+  const captureBucket = bucket === undefined ? webCaptureBucket() : bucket;
   const rows: JourneySourceRow[] = [{ key: 'golden', label: `Claude Code: ${goldenLabel}`, status: 'verified', adapter: 'claude_code_hook' }];
-  const captures = [...capturesIn(t3Root(), 't3:', ''), ...capturesIn(savedRoot(), 't3-saved:', ' (saved)'), ...await publishedCaptures(bucket)].sort((a, b) => b.at.localeCompare(a.at));
+  // Both remote lists run at once, so a slow Supabase costs one timeout, not two. Times mix `Z` and `+00:00`, so sort by parsed time.
+  const [published, takeRows] = await Promise.all([publishedCaptures(captureBucket), listTakeRows(takes)]);
+  const at = (value: string) => Date.parse(value) || 0;
+  const captures = [...capturesIn(t3Root(), 't3:', ''), ...capturesIn(savedRoot(), 't3-saved:', ' (saved)'), ...published, ...takeRows].sort((a, b) => at(b.at) - at(a.at));
   return [...rows, ...captures.map(({ at: _at, ...row }) => row)];
 }
 
@@ -180,9 +186,10 @@ function t3Response(key: string, capture: CaptureFile, events: Event[], edges: E
 }
 
 // The bucket is only opened for a `t3-pub:` key, so the other sources never need the server key.
-export async function loadJourney(key: string, bucket?: CaptureBucket | null): Promise<JourneyResponse | null> {
+export async function loadJourney(key: string, bucket?: CaptureBucket | null, takes: TakeStore | null = bucket === undefined ? webTakeStore() : null): Promise<JourneyResponse | null> {
   if (key === 'golden') return golden();
   if (key.startsWith('t3:') || key.startsWith('t3-saved:')) return t3(key);
   if (key.startsWith('t3-pub:')) return published(key, bucket === undefined ? webCaptureBucket() : bucket);
+  if (key.startsWith('take:')) return loadTake(key, takes, strip);
   return null;
 }
