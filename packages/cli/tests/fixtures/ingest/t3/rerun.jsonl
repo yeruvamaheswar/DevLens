@@ -1,0 +1,1 @@
+{"id":"sandbox:t3:th:r1","session_id":"t3:th","project_id":"t3-project","ts":"2026-10-29T20:05:00.000Z","seq":1,"actor":"ci","type":"test","source":"sandbox","provenance":"observed","recording_ref":null,"media_offset_ms":null,"payload":{"status":"passed","command":"npm test","output":"ok","signal":"rerun"}}

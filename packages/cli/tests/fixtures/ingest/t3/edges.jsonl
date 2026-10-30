@@ -1,0 +1,2 @@
+{"id":"rule-1-prompted-v1:t3:th:m1:t3:th:t1","src":"t3:th:m1","dst":"t3:th:t1","rel":"prompted","derived_by":"rule-1-prompted-v1","provenance":"inferred","evidence_event_ids":["t3:th:m1","t3:th:t1"]}
+{"id":"M6.passed_after_failure.v1:sandbox:t3:th:r1:t3:th:t1","src":"sandbox:t3:th:r1","dst":"t3:th:t1","rel":"verifies","derived_by":"M6.passed_after_failure.v1","provenance":"inferred","evidence_event_ids":["sandbox:t3:th:r1","t3:th:t1"]}

@@ -52,6 +52,14 @@ export type JourneySourceMeta = {
   not_captured: string[];
   media: { url: string; label: string } | null;
   live?: boolean; // true while `t3 watch` stamped the capture in the last 15 s
+  take?: {
+    authorship: 'human' | 'scripted';
+    authorship_note: string | null;
+    analysis_status: 'complete' | 'partial' | 'missing' | 'failed';
+    verification: 'rerun_passed' | 'rerun_failed' | 'none';
+    sync: { basis: string; uncertainty_ms: number | null; anchors: number } | null; // null when there is no recording
+    redaction: { spans: number; matches: number } | null;
+  };
 };
 
 export type Journey = {
