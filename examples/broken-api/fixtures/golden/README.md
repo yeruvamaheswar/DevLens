@@ -5,7 +5,8 @@ This is a real take, not a synthetic fixture. The project author recorded their 
 ## What it contains
 
 - `session.jsonl`: 30 events from two Claude Code sessions, captured by project-local hooks with redaction before append.
-- `session.webm`: one window recording of the terminal that ran Claude Code. Window mode only. The recorder requests no audio and no camera.
+- `playback.mp4`: the window recording of the terminal that ran Claude Code, blurred so the developer's user name and machine name are not visible. H.264, no audio, same frame timing as the original (3,091 frames). Window mode only. The recorder requests no audio and no camera. The unblurred original is not in this repository.
+- `meta.json`: the window's wall-clock start and end, the byte size of `playback.mp4`, and its storage path (`takes/golden-broken-api/<first 12 hex of sha256>.mp4`).
 - `git-log.txt`: the commits of the temporary working copy: `starter`, `first-fix`, `final-fix`.
 
 ## What happened
@@ -20,7 +21,7 @@ The author's prompt asked Claude to run plain `npm test` every time, so the fail
 
 - The home path `/Users/UmaYeruva` appears in `cwd` and `transcript_path` fields. It was accepted and not removed.
 - Event 25 stores the `Authorization` line of an edit as `[REDACTED]`. The line is not a secret. The git diff holds the true edit.
-- The WebM header reports 238x152, but nearly all frames are 2462x1582. Check playback before relying on the header.
+- The unblurred recording is public in git history (commit `2d36a04`). Removing it from history would rewrite the repository and is not done.
 - Claude Code collapses tool output on screen, so the failing assertions are clearest in the log, not in the video.
 - `git-log.txt` shows the author's git name and email.
 

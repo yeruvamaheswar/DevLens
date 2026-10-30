@@ -68,11 +68,12 @@ a.download = 'session.webm';
 a.click();
 ```
 
-From the repo root, with `<temp>` as the working copy and `<webm>` as the downloaded file:
+From the repo root, with `<temp>` as the working copy, `<webm>` as the downloaded file, and `<blurred.mp4>` as its blurred MP4 copy:
 
 ```
 cp <temp>/.devlens/events.jsonl examples/broken-api/fixtures/golden/session.jsonl
-cp <webm> examples/broken-api/fixtures/golden/session.webm
+# <webm> must be blurred first (names and paths hidden) and saved as MP4; see plans/take-ingest-contract.md
+cp <blurred.mp4> examples/broken-api/fixtures/golden/playback.mp4
 git -C <temp> log --stat > examples/broken-api/fixtures/golden/git-log.txt
 npm run fixture:verify -- broken-api
 ```
